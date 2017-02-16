@@ -2,6 +2,7 @@ from simulocloud import PointCloud
 import pytest
 import numpy as np
 import cPickle as pkl
+import os
 
 """ Test data """
 
@@ -23,12 +24,17 @@ def expected_list_points():
                     dtype=[('x', '<f8'), ('y', '<f8'), ('z', '<f8')])
 
 @pytest.fixture
-def expected_las_points():
+def expected_las_points(fname='ALS_points.pkl'):
     """The points array that should be generated from the example las data."""
-    fpath = 'data/ALS_points.pkl' # should be function parameter
-    with open(fpath, 'rb') as o:
+    with open(abspath(fname), 'rb') as o:
         points = pkl.load(o)
     return points
+
+""" Helper functions """
+
+def abspath(fname, fdir='data'):
+    """Return the absolute filepath of filename in (relative) directory."""
+    return os.path.join(os.path.dirname(__file__), fdir, fname)
 
 """ Test functions """
 
@@ -36,8 +42,6 @@ def test_PointCloud_read_directly_from_list(input_list, expected_list_points):
     """Can PointCloud initialise directly from `[xs, ys, zs]` ?"""
     assert np.all(PointCloud(input_list).points == expected_list_points)
 
-
-def test_PointCloud_read_from_las(expected_las_points):
+def test_PointCloud_read_from_las(expected_las_points, fname='ALS.las'):
     """Can PointCloud be constructed from a `.las` file?"""
-    input_las_fpath='data/ALS.las' # should come from parameter
-    assert np.all(PointCloud.from_las(input_las_fpath).points == expected_las_points)
+    assert np.all(PointCloud.from_las(abspath(fname)).points == expected_las_points)
