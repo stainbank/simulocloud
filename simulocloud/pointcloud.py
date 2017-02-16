@@ -10,8 +10,8 @@ import laspy
 
 class PointCloud(object):
     """ Contains point cloud data """
-        
-    dtypes = [('x', 'f8'), ('y', 'f8'), ('z', 'f8')] # points array structure
+
+    dtype = np.float64
 
     def __init__(self, xyz):
         """Store 3D point coordinates in a structured array.
@@ -40,7 +40,8 @@ class PointCloud(object):
         The use of the constructor methods (`PointCloud.from...`) is preferred.
         """
         # Combine x, y and z into (flat) structured array 
-        self.points = np.column_stack(xyz).ravel().view(dtype=self.dtypes) 
+        self.points = np.column_stack(xyz).ravel().view(
+            dtype=[('x', self.dtype), ('y', self.dtype), ('z', self.dtype)])
     
     """ Constructor methods """
     
@@ -68,3 +69,6 @@ class PointCloud(object):
         
         """
         return PointCloud((f.x, f.y, f.z))
+    
+    """ Instance methods """
+    
