@@ -1,8 +1,7 @@
 from simulocloud import PointCloud
 import pytest
-import json
 import numpy as np
-
+import cPickle as pkl
 
 """ Test data """
 
@@ -23,6 +22,13 @@ def expected_list_points():
                      ( 18.8,  19.9,  8.9)], 
                     dtype=[('x', '<f8'), ('y', '<f8'), ('z', '<f8')])
 
+@pytest.fixture
+def expected_las_points():
+    """The points array that should be generated from the example las data."""
+    fpath = 'data/ALS_points.pkl' # should be function parameter
+    with open(fpath, 'rb') as o:
+        points = pkl.load(o)
+    return points
 
 """ Test functions """
 
@@ -30,3 +36,8 @@ def test_PointCloud_read_directly_from_list(input_list, expected_list_points):
     """Can PointCloud initialise directly from `[xs, ys, zs]` ?"""
     assert np.all(PointCloud(input_list).points == expected_list_points)
 
+
+def test_PointCloud_read_from_las(expected_las_points):
+    """Can PointCloud be constructed from a `.las` file?"""
+    input_las_fpath='data/ALS.las' # should come from parameter
+    assert np.all(PointCloud.from_las(input_las_fpath).points == expected_las_points)
