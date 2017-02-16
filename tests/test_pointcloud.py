@@ -5,23 +5,30 @@ import cPickle as pkl
 import os
 
 """ Test data """
+# Data type used for arrays
+_DTYPE = np.float64
 
 @pytest.fixture
 def input_list():
     """Simple [xs, ys, zs] coordinates."""
-    return [[10.0, 12.2, 14.4, 16.6, 18.8],
-            [11.1, 13.3, 15.5, 17.7, 19.9],
-            [0.1, 2.1, 4.5, 6.7, 8.9]]
+    return [[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9],
+            [2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9]]
 
 @pytest.fixture
 def expected_list_points():
     """The points array that should be generated from `input_list`."""
-    return np.array([( 10. ,  11.1,  0.1),
-                     ( 12.2,  13.3,  2.1),
-                     ( 14.4,  15.5,  4.5),
-                     ( 16.6,  17.7,  6.7),
-                     ( 18.8,  19.9,  8.9)], 
-                    dtype=[('x', '<f8'), ('y', '<f8'), ('z', '<f8')])
+    return np.array([( 0. ,  1. ,  2. ),
+                    ( 0.1,  1.1,  2.1),
+                    ( 0.2,  1.2,  2.2),
+                    ( 0.3,  1.3,  2.3),
+                    ( 0.4,  1.4,  2.4),
+                    ( 0.5,  1.5,  2.5),
+                    ( 0.6,  1.6,  2.6),
+                    ( 0.7,  1.7,  2.7),
+                    ( 0.8,  1.8,  2.8),
+                    ( 0.9,  1.9,  2.9)],
+                   dtype=[('x', _DTYPE), ('y', _DTYPE), ('z', _DTYPE)])
 
 @pytest.fixture
 def expected_las_points(fname='ALS_points.pkl'):
