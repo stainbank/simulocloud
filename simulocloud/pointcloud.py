@@ -72,3 +72,13 @@ class PointCloud(object):
     
     """ Instance methods """
     
+    @property
+    def arr(self):
+        """Get point coordinates as unstructured n*3 array).
+        
+        Returns
+        -------
+        np.ndarray with shape (npoints, 3)
+
+        """
+        return self.points.view(self.dtype).reshape(-1, 3)

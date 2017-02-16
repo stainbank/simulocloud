@@ -38,6 +38,11 @@ def expected_las_points(fname='ALS_points.pkl'):
         points = pkl.load(o)
     return points
 
+@pytest.fixture
+def pc(input_array):
+    """Set up a `PointCloud` instance using test data."""
+    return PointCloud(input_array)
+
 """ Helper functions """
 
 def abspath(fname, fdir='data'):
@@ -53,3 +58,7 @@ def test_PointCloud_read_from_array(input_array, expected_DATA_points):
 def test_PointCloud_read_from_las(expected_las_points, fname='ALS.las'):
     """Can PointCloud be constructed from a `.las` file?"""
     assert np.all(PointCloud.from_las(abspath(fname)).points == expected_las_points)
+
+def test_arr_generation(pc, input_array):
+    """Does PointCloud.arr work as expected?."""
+    assert np.all(pc.arr == input_array.T)
