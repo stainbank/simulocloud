@@ -5,7 +5,7 @@ Read in and store point clouds.
 """
 
 import numpy as np
-from laspy.file import File
+import laspy
 
 
 class PointCloud(object):
@@ -52,7 +52,19 @@ class PointCloud(object):
         ---------
         fpath: str
             filepath of .las file containing 3D point coordinates
+       
+        """
+        with laspy.file.File(fpath) as f:
+            return cls.from_laspy_File(f)
+
+    @classmethod
+    def from_laspy_File(cls, f):
+        """Initialise PointCloud from a laspy File.
         
-        """ 
-        f = File(fpath)
+        Arguments
+        ---------
+        f: `laspy.file.File` instance
+            file object must be open, and will remain so
+        
+        """
         return PointCloud((f.x, f.y, f.z))
