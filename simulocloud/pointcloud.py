@@ -42,6 +42,10 @@ class PointCloud(object):
         # Combine x, y and z into (flat) structured array 
         self.points = np.column_stack(xyz).ravel().view(
             dtype=[('x', self.dtype), ('y', self.dtype), ('z', self.dtype)])
+
+    def __len__(self):
+        """Number of points in point cloud"""
+        return len(self.points)
     
     """ Constructor methods """
     

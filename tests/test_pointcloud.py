@@ -63,7 +63,12 @@ def test_arr_generation(pc, input_array):
     """Does PointCloud.arr work as expected?."""
     assert np.all(pc.arr == input_array.T)
 
-def test_bounds(pc):
+def test_bounds_returns_accurate_boundary_box(pc):
     """Does PointCloud.bounds accurately describe the bounding box?"""
     assert pc.bounds == tuple((f(c) for f in (min, max) for c in _INPUT_DATA)) 
 
+def test_len_works(pc):
+    """Does __len__() report the correct number of points?"""
+    # Assumes lists in _INPUT_DATA are consistent length
+    assert len(pc) == len(_INPUT_DATA[0])
+    
