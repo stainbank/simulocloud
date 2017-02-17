@@ -62,3 +62,8 @@ def test_PointCloud_read_from_las(expected_las_points, fname='ALS.las'):
 def test_arr_generation(pc, input_array):
     """Does PointCloud.arr work as expected?."""
     assert np.all(pc.arr == input_array.T)
+
+def test_bounds(pc):
+    """Does PointCloud.bounds accurately describe the bounding box?"""
+    assert pc.bounds == tuple((f(c) for f in (min, max) for c in _INPUT_DATA)) 
+

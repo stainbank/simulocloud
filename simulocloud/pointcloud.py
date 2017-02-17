@@ -6,7 +6,7 @@ Read in and store point clouds.
 
 import numpy as np
 import laspy
-
+from collections import namedtuple
 
 class PointCloud(object):
     """ Contains point cloud data """
@@ -82,3 +82,19 @@ class PointCloud(object):
 
         """
         return self.points.view(self.dtype).reshape(-1, 3)
+
+    @property
+    def bounds(self):
+        """Boundary box surrounding PointCloud.
+        
+        Returns
+        -------
+        namedtuple (minx, miny, minz, maxx, maxy, maxz)
+        """
+        p = self.points
+        return Bounds(np.min(p['x']), np.min(p['y']), np.min(p['z']),
+                      np.max(p['x']), np.max(p['y']), np.max(p['z']))
+
+
+# Container for bounds box surrounding PointCloud
+Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
