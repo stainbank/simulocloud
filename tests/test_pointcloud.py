@@ -1,4 +1,4 @@
-from simulocloud import PointCloud
+from simulocloud import PointCloud, Bounds
 import pytest
 import numpy as np
 import cPickle as pkl
@@ -43,6 +43,12 @@ def pc(input_array):
     """Set up a `PointCloud` instance using test data."""
     return PointCloud(input_array)
 
+@pytest.fixture
+def empty_bounds():
+    """A Bounds nametuple with all fields set to None."""
+    return Bounds(minx=None, miny=None, minz=None,
+                  maxx=None, maxy=None, maxz=None)
+
 """ Helper functions """
 
 def abspath(fname, fdir='data'):
@@ -71,4 +77,39 @@ def test_len_works(pc):
     """Does __len__() report the correct number of points?"""
     # Assumes lists in _INPUT_DATA are consistent length
     assert len(pc) == len(_INPUT_DATA[0])
+
+def test_cropping_with_empty_bounds(pc, empty_bounds):
+    """Does no PointCloud cropping occur when bounds of None are used?"""
+    assert np.all(pc.crop(empty_bounds).points == pc.points)
+
+@pytest.mark.parametrize('c', ('x', 'y', 'z'))
+def test_cropping_is_lower_bounds_inclusive(pc, empty_bounds, c):
+    """Does PointCloud cropping preserve values at lower bounds?"""
+    # Ensure a unique point used as minimum bound
+    sorted_points = np.sort(pc.points, order=[c])
+    for i, minc in enumerate(sorted_points[c]):
+        if i < 1: continue # at least one point must be out of bounds
+        if minc != sorted_points[i-1][c]: 
+            lowest_point = sorted_points[i]
+            break
     
+    # Apply lower bound cropping to a single dimension
+    pc = pc.crop(empty_bounds._replace(**{'min'+c: minc}))
+
+    assert np.sort(pc.points, order=c)[0] == lowest_point
+
+@pytest.mark.parametrize('c', ('x', 'y', 'z'))
+def test_cropping_is_upper_bounds_exclusive(pc, empty_bounds, c):
+    """Does PointCloud cropping omit values at upper bounds?"""
+    # Ensure a unique point used as maximum bound
+    rev_sorted_points = np.sort(pc.points, order=[c])[::-1]
+    for i, maxc in enumerate(rev_sorted_points[c]):
+        if maxc != rev_sorted_points[i+1][c]:
+            oob_point = rev_sorted_points[i]
+            highest_point = rev_sorted_points[i+1]
+            break
+
+    # Apply upper bound cropping to a single dimension
+    pc = pc.crop(empty_bounds._replace(**{'max'+c: maxc}))
+
+    assert np.sort(pc.points, order=c)[-1] == highest_point and oob_point not in pc.points
