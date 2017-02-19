@@ -94,11 +94,68 @@ class PointCloud(object):
         Returns
         -------
         namedtuple (minx, miny, minz, maxx, maxy, maxz)
+
         """
         p = self.points
         return Bounds(np.min(p['x']), np.min(p['y']), np.min(p['z']),
                       np.max(p['x']), np.max(p['y']), np.max(p['z']))
 
+    def crop(self, bounds):
+        """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
+        
+        Arguments
+        ---------
+        bounds: `Bounds` namedtuple
+            (minx, miny, minz, maxx, maxy, maxz) to crop within
+        
+        Returns
+        -------
+        PointCloud instance
+            new object containing only points within specified bounds
+
+        """
+        # Build results using generator to limit memory usage
+        out_of_bounds = np.zeros(len(self))
+        for comparison in iter_out_of_bounds(self.points, bounds):
+            out_of_bounds = np.logical_or(comparison, out_of_bounds)
+        
+        return PointCloud(self.points[~out_of_bounds])
+
 
 # Container for bounds box surrounding PointCloud
 Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
+
+def iter_out_of_bounds(points, bounds):
+    """Iteratively determine point coordinates outside of bounds.
+
+    Arguments
+    ---------
+    points: numpy.ndarray
+        structured array containing 'x', 'y' and 'z' point coordinates
+    bounds: `Bounds` namedtuple
+        (minx, miny, minz, maxx, maxy, maxz) to test point coordinates against
+    
+    Returns
+    -------
+    generator (len 6)
+        each iteration yields a boolean numpy.ndarray describing whether,
+        seperately, each dimension of (x,y,z) point coordinates are outside
+        each of the respective lower and upper bound values
+        sequence order is identical to bounds
+    
+    Notes
+    -----
+    Comparisons are python-like, i.e.:
+        x < minx
+        x >= maxx
+        All coordinate values compare False to `None`.
+    """
+    # Set up comparison elements in same order as bounds
+    comparison_funcs = (np.less,)*3 + (np.greater_equal,)*3
+    coords = ('x', 'y', 'z')*2
+    
+    for compare, c, bound in zip(comparison_funcs, coords, bounds):
+        if bound is None: # None is a permissive bound
+            yield np.zeros_like(points[c], dtype=bool)
+        else:
+            yield compare(points[c], bound)

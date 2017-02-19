@@ -1,1 +1,1 @@
-from pointcloud import PointCloud
+from pointcloud import PointCloud, Bounds
