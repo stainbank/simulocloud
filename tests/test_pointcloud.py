@@ -1,4 +1,5 @@
 from simulocloud import PointCloud, Bounds
+from simulocloud.exceptions import EmptyPointCloud
 import pytest
 import numpy as np
 import cPickle as pkl
@@ -44,11 +45,14 @@ def pc(input_array):
     return PointCloud(input_array)
 
 @pytest.fixture
-def empty_bounds():
-    """A Bounds nametuple with all fields set to None."""
-    return Bounds(minx=None, miny=None, minz=None,
-                  maxx=None, maxy=None, maxz=None)
+def none_bounds():
+    """A Bounds nametuple with all bounds set to None."""
+    return Bounds(*(None,)*6)
 
+@pytest.fixture
+def inf_bounds():
+    """A Bounds namedtuple with all bounds set to inf/-inf."""
+    return Bounds(*(np.inf,)*3 + (np.inf,)*3)
 """ Helper functions """
 
 def abspath(fname, fdir='data'):
@@ -78,12 +82,12 @@ def test_len_works(pc):
     # Assumes lists in _INPUT_DATA are consistent length
     assert len(pc) == len(_INPUT_DATA[0])
 
-def test_cropping_with_empty_bounds(pc, empty_bounds):
+def test_cropping_with_none_bounds(pc, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
-    assert np.all(pc.crop(empty_bounds).points == pc.points)
+    assert np.all(pc.crop(none_bounds).points == pc.points)
 
 @pytest.mark.parametrize('c', ('x', 'y', 'z'))
-def test_cropping_is_lower_bounds_inclusive(pc, empty_bounds, c):
+def test_cropping_is_lower_bounds_inclusive(pc, none_bounds, c):
     """Does PointCloud cropping preserve values at lower bounds?"""
     # Ensure a unique point used as minimum bound
     sorted_points = np.sort(pc.points, order=[c])
@@ -94,12 +98,12 @@ def test_cropping_is_lower_bounds_inclusive(pc, empty_bounds, c):
             break
     
     # Apply lower bound cropping to a single dimension
-    pc = pc.crop(empty_bounds._replace(**{'min'+c: minc}))
+    pc = pc.crop(none_bounds._replace(**{'min'+c: minc}))
 
     assert np.sort(pc.points, order=c)[0] == lowest_point
 
 @pytest.mark.parametrize('c', ('x', 'y', 'z'))
-def test_cropping_is_upper_bounds_exclusive(pc, empty_bounds, c):
+def test_cropping_is_upper_bounds_exclusive(pc, none_bounds, c):
     """Does PointCloud cropping omit values at upper bounds?"""
     # Ensure a unique point used as maximum bound
     rev_sorted_points = np.sort(pc.points, order=[c])[::-1]
@@ -110,6 +114,15 @@ def test_cropping_is_upper_bounds_exclusive(pc, empty_bounds, c):
             break
 
     # Apply upper bound cropping to a single dimension
-    pc = pc.crop(empty_bounds._replace(**{'max'+c: maxc}))
+    pc = pc.crop(none_bounds._replace(**{'max'+c: maxc}))
 
     assert np.sort(pc.points, order=c)[-1] == highest_point and oob_point not in pc.points
+
+def test_cropping_to_nothing_raises_exception_when_specified(pc, inf_bounds):
+    """Does PointCloud cropping refuse to return an empty PointCloud?"""
+    with pytest.raises(EmptyPointCloud):
+        pc.crop(inf_bounds, return_empty=False)
+
+def test_cropping_to_nothing_returns_empty(pc, inf_bounds):
+    """Does PointCloud cropping return an empty PointCloud when asked?"""
+    assert not len(pc.crop(inf_bounds, return_empty=True))
