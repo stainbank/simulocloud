@@ -7,6 +7,7 @@ Read in and store point clouds.
 import numpy as np
 import laspy
 from collections import namedtuple
+from .exceptions import EmptyPointCloud
 
 class PointCloud(object):
     """ Contains point cloud data """
@@ -100,13 +101,16 @@ class PointCloud(object):
         return Bounds(np.min(p['x']), np.min(p['y']), np.min(p['z']),
                       np.max(p['x']), np.max(p['y']), np.max(p['z']))
 
-    def crop(self, bounds):
+    def crop(self, bounds, return_empty=False):
         """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
         
         Arguments
         ---------
         bounds: `Bounds` namedtuple
             (minx, miny, minz, maxx, maxy, maxz) to crop within
+        return_empty: bool (defaul: False)
+            whether to allow empty pointclouds to be created or raise an
+            EmptyPointCloud exception        
         
         Returns
         -------
@@ -118,6 +122,14 @@ class PointCloud(object):
         out_of_bounds = np.zeros(len(self))
         for comparison in iter_out_of_bounds(self.points, bounds):
             out_of_bounds = np.logical_or(comparison, out_of_bounds)
+        
+        # Deal with empty pointclouds
+        if out_of_bounds.all():
+            if return_empty:
+                return PointCloud([[], [], []])
+            else:
+                raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
+                                            bounds)
         
         return PointCloud(self.points[~out_of_bounds])
 
