@@ -126,3 +126,9 @@ def test_cropping_to_nothing_raises_exception_when_specified(pc, inf_bounds):
 def test_cropping_to_nothing_returns_empty(pc, inf_bounds):
     """Does PointCloud cropping return an empty PointCloud when asked?"""
     assert not len(pc.crop(inf_bounds, return_empty=True))
+
+def test_PointCloud_exports_transparently_to_txt(pc, tmpdir):
+    """Is the file output by PointCloud.to_txt identical to the input?"""
+    fpath = tmpdir.join("_INPUT_DATA.txt").strpath
+    pc.to_txt(fpath) 
+    assert np.all(pc.points == PointCloud(np.loadtxt(fpath)).points)

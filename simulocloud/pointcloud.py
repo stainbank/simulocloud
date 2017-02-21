@@ -133,6 +133,17 @@ class PointCloud(object):
         
         return PointCloud(self.points[~out_of_bounds])
 
+    def to_txt(self, fpath):
+        """Export point cloud coordinates as 3-column (xyz) ASCII file.
+    
+        Arguments
+        ---------
+        fpath: str
+            path to file to write 
+        
+        """
+        np.savetxt(fpath, self.arr.T)
+
 
 # Container for bounds box surrounding PointCloud
 Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
