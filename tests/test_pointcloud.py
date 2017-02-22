@@ -40,8 +40,8 @@ def expected_las_points(fname='ALS_points.pkl'):
     return points
 
 @pytest.fixture
-def pc(input_array):
-    """Set up a `PointCloud` instance using test data."""
+def pc_arr(input_array):
+    """Set up a `PointCloud` instance using array test data."""
     return PointCloud(input_array)
 
 @pytest.fixture
@@ -69,28 +69,28 @@ def test_PointCloud_read_from_las(expected_las_points, fname='ALS.las'):
     """Can PointCloud be constructed from a `.las` file?"""
     assert np.all(PointCloud.from_las(abspath(fname)).points == expected_las_points)
 
-def test_arr_generation(pc, input_array):
+def test_arr_generation(pc_arr, input_array):
     """Does PointCloud.arr work as expected?."""
-    assert np.all(pc.arr == input_array.T)
+    assert np.all(pc_arr.arr == input_array.T)
 
-def test_bounds_returns_accurate_boundary_box(pc):
+def test_bounds_returns_accurate_boundary_box(pc_arr):
     """Does PointCloud.bounds accurately describe the bounding box?"""
-    assert pc.bounds == tuple((f(c) for f in (min, max) for c in _INPUT_DATA)) 
+    assert pc_arr.bounds == tuple((f(c) for f in (min, max) for c in _INPUT_DATA)) 
 
-def test_len_works(pc):
+def test_len_works(pc_arr):
     """Does __len__() report the correct number of points?"""
     # Assumes lists in _INPUT_DATA are consistent length
-    assert len(pc) == len(_INPUT_DATA[0])
+    assert len(pc_arr) == len(_INPUT_DATA[0])
 
-def test_cropping_with_none_bounds(pc, none_bounds):
+def test_cropping_with_none_bounds(pc_arr, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
-    assert np.all(pc.crop(none_bounds).points == pc.points)
+    assert np.all(pc_arr.crop(none_bounds).points == pc_arr.points)
 
 @pytest.mark.parametrize('c', ('x', 'y', 'z'))
-def test_cropping_is_lower_bounds_inclusive(pc, none_bounds, c):
+def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, c):
     """Does PointCloud cropping preserve values at lower bounds?"""
     # Ensure a unique point used as minimum bound
-    sorted_points = np.sort(pc.points, order=[c])
+    sorted_points = np.sort(pc_arr.points, order=[c])
     for i, minc in enumerate(sorted_points[c]):
         if i < 1: continue # at least one point must be out of bounds
         if minc != sorted_points[i-1][c]: 
@@ -98,15 +98,15 @@ def test_cropping_is_lower_bounds_inclusive(pc, none_bounds, c):
             break
     
     # Apply lower bound cropping to a single dimension
-    pc = pc.crop(none_bounds._replace(**{'min'+c: minc}))
+    pc_cropped = pc_arr.crop(none_bounds._replace(**{'min'+c: minc}))
 
-    assert np.sort(pc.points, order=c)[0] == lowest_point
+    assert np.sort(pc_cropped.points, order=c)[0] == lowest_point
 
 @pytest.mark.parametrize('c', ('x', 'y', 'z'))
-def test_cropping_is_upper_bounds_exclusive(pc, none_bounds, c):
+def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, c):
     """Does PointCloud cropping omit values at upper bounds?"""
     # Ensure a unique point used as maximum bound
-    rev_sorted_points = np.sort(pc.points, order=[c])[::-1]
+    rev_sorted_points = np.sort(pc_arr.points, order=[c])[::-1]
     for i, maxc in enumerate(rev_sorted_points[c]):
         if maxc != rev_sorted_points[i+1][c]:
             oob_point = rev_sorted_points[i]
@@ -114,21 +114,23 @@ def test_cropping_is_upper_bounds_exclusive(pc, none_bounds, c):
             break
 
     # Apply upper bound cropping to a single dimension
-    pc = pc.crop(none_bounds._replace(**{'max'+c: maxc}))
+    pc_arr = pc_arr.crop(none_bounds._replace(**{'max'+c: maxc}))
 
-    assert np.sort(pc.points, order=c)[-1] == highest_point and oob_point not in pc.points
+    assert (np.sort(pc_arr.points, order=c)[-1] == highest_point) and (
+           oob_point not in pc_arr.points)
 
-def test_cropping_to_nothing_raises_exception_when_specified(pc, inf_bounds):
+def test_cropping_to_nothing_raises_exception_when_specified(pc_arr, inf_bounds):
     """Does PointCloud cropping refuse to return an empty PointCloud?"""
     with pytest.raises(EmptyPointCloud):
-        pc.crop(inf_bounds, return_empty=False)
+        pc_arr.crop(inf_bounds, return_empty=False)
 
-def test_cropping_to_nothing_returns_empty(pc, inf_bounds):
+def test_cropping_to_nothing_returns_empty(pc_arr, inf_bounds):
     """Does PointCloud cropping return an empty PointCloud when asked?"""
-    assert not len(pc.crop(inf_bounds, return_empty=True))
+    assert not len(pc_arr.crop(inf_bounds, return_empty=True))
 
-def test_PointCloud_exports_transparently_to_txt(pc, tmpdir):
+def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     """Is the file output by PointCloud.to_txt identical to the input?"""
     fpath = tmpdir.join("_INPUT_DATA.txt").strpath
-    pc.to_txt(fpath) 
-    assert np.all(pc.points == PointCloud(np.loadtxt(fpath)).points)
+    pc_arr.to_txt(fpath) 
+    assert np.all(pc_arr.points == PointCloud(np.loadtxt(fpath)).points)
+
