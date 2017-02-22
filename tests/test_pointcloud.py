@@ -5,7 +5,7 @@ import numpy as np
 import cPickle as pkl
 import os
 
-""" Test data """
+""" Constants and fixtures """
 # Data type used for arrays
 _DTYPE = np.float64
 _INPUT_DATA = [[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
@@ -14,7 +14,7 @@ _INPUT_DATA = [[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
 
 @pytest.fixture
 def expected_DATA_points():
-    """The points array that should be generated from `input_list`."""
+    """The points array that should be generated from input_list."""
     return np.array([( 0. ,  1. ,  2. ),
                      ( 0.1,  1.1,  2.1),
                      ( 0.2,  1.2,  2.2),
@@ -29,7 +29,7 @@ def expected_DATA_points():
 
 @pytest.fixture
 def input_array():
-    """Simple [xs, ys, zs] numpy.ndarray of `input_list`."""
+    """Simple [xs, ys, zs] numpy.ndarray of input_list."""
     return np.array(_INPUT_DATA, dtype=_DTYPE)
 
 @pytest.fixture
@@ -41,7 +41,7 @@ def expected_las_points(fname='ALS_points.pkl'):
 
 @pytest.fixture
 def pc_arr(input_array):
-    """Set up a `PointCloud` instance using array test data."""
+    """Set up a PointCloud instance using array test data."""
     return PointCloud(input_array)
 
 @pytest.fixture
@@ -62,11 +62,11 @@ def abspath(fname, fdir='data'):
 """ Test functions """
 
 def test_PointCloud_read_from_array(input_array, expected_DATA_points):
-    """Can PointCloud initialise directly from a `[xs, ys, zs]` array?"""
+    """Can PointCloud initialise directly from a [xs, ys, zs] array?"""
     assert np.all(PointCloud(input_array).points == expected_DATA_points)
 
 def test_PointCloud_read_from_las(expected_las_points, fname='ALS.las'):
-    """Can PointCloud be constructed from a `.las` file?"""
+    """Can PointCloud be constructed from a .las file?"""
     assert np.all(PointCloud.from_las(abspath(fname)).points == expected_las_points)
 
 def test_arr_generation(pc_arr, input_array):
@@ -99,7 +99,7 @@ def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, c):
     
     # Apply lower bound cropping to a single dimension
     pc_cropped = pc_arr.crop(none_bounds._replace(**{'min'+c: minc}))
-
+    
     assert np.sort(pc_cropped.points, order=c)[0] == lowest_point
 
 @pytest.mark.parametrize('c', ('x', 'y', 'z'))
@@ -112,10 +112,9 @@ def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, c):
             oob_point = rev_sorted_points[i]
             highest_point = rev_sorted_points[i+1]
             break
-
     # Apply upper bound cropping to a single dimension
     pc_arr = pc_arr.crop(none_bounds._replace(**{'max'+c: maxc}))
-
+    
     assert (np.sort(pc_arr.points, order=c)[-1] == highest_point) and (
            oob_point not in pc_arr.points)
 
@@ -132,5 +131,6 @@ def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     """Is the file output by PointCloud.to_txt identical to the input?"""
     fpath = tmpdir.join("_INPUT_DATA.txt").strpath
     pc_arr.to_txt(fpath) 
+
     assert np.all(pc_arr.points == PointCloud(np.loadtxt(fpath)).points)
 
