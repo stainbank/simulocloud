@@ -5,13 +5,14 @@ Read in and store point clouds.
 """
 
 import numpy as np
-import laspy
+from laspy.file import File
+from laspy.header import Header, VLR
 from collections import namedtuple
 from .exceptions import EmptyPointCloud
 
 class PointCloud(object):
     """ Contains point cloud data """
-
+    
     dtype = np.float64
 
     def __init__(self, xyz):
@@ -49,18 +50,18 @@ class PointCloud(object):
         return len(self.points)
     
     """ Constructor methods """
-    
+ 
     @classmethod
     def from_las(cls, fpath):
         """Initialise PointCloud from .las file.
-
+    
         Arguments
         ---------
         fpath: str
             filepath of .las file containing 3D point coordinates
        
         """
-        with laspy.file.File(fpath) as f:
+        with File(fpath) as f:
             return cls.from_laspy_File(f)
 
     @classmethod
@@ -76,7 +77,7 @@ class PointCloud(object):
         return PointCloud((f.x, f.y, f.z))
     
     """ Instance methods """
-    
+
     @property
     def arr(self):
         """Get point coordinates as unstructured n*3 array).
@@ -84,7 +85,7 @@ class PointCloud(object):
         Returns
         -------
         np.ndarray with shape (npoints, 3)
-
+    
         """
         return self.points.view(self.dtype).reshape(-1, 3)
 
@@ -95,7 +96,7 @@ class PointCloud(object):
         Returns
         -------
         namedtuple (minx, miny, minz, maxx, maxy, maxz)
-
+        
         """
         p = self.points
         return Bounds(np.min(p['x']), np.min(p['y']), np.min(p['z']),
@@ -116,7 +117,7 @@ class PointCloud(object):
         -------
         PointCloud instance
             new object containing only points within specified bounds
-
+        
         """
         # Build results using generator to limit memory usage
         out_of_bounds = np.zeros(len(self))
@@ -130,7 +131,7 @@ class PointCloud(object):
             else:
                 raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
                                             bounds)
-        
+         
         return PointCloud(self.points[~out_of_bounds])
 
     def to_txt(self, fpath):
