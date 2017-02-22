@@ -45,6 +45,11 @@ def pc_arr(input_array):
     return PointCloud(input_array)
 
 @pytest.fixture
+def pc_las(fname='ALS.las'):
+    """Set up a PointCloud instance using test data"""
+    return PointCloud.from_las(abspath(fname))
+
+@pytest.fixture
 def none_bounds():
     """A Bounds nametuple with all bounds set to None."""
     return Bounds(*(None,)*6)
@@ -53,6 +58,7 @@ def none_bounds():
 def inf_bounds():
     """A Bounds namedtuple with all bounds set to inf/-inf."""
     return Bounds(*(np.inf,)*3 + (np.inf,)*3)
+
 """ Helper functions """
 
 def abspath(fname, fdir='data'):
@@ -61,13 +67,13 @@ def abspath(fname, fdir='data'):
 
 """ Test functions """
 
-def test_PointCloud_read_from_array(input_array, expected_DATA_points):
+def test_PointCloud_read_from_array(pc_arr, expected_DATA_points):
     """Can PointCloud initialise directly from a [xs, ys, zs] array?"""
-    assert np.all(PointCloud(input_array).points == expected_DATA_points)
+    assert np.all(pc_arr.points == expected_DATA_points)
 
-def test_PointCloud_read_from_las(expected_las_points, fname='ALS.las'):
+def test_PointCloud_read_from_las(pc_las, expected_las_points):
     """Can PointCloud be constructed from a .las file?"""
-    assert np.all(PointCloud.from_las(abspath(fname)).points == expected_las_points)
+    assert np.all(pc_las.points == expected_las_points)
 
 def test_arr_generation(pc_arr, input_array):
     """Does PointCloud.arr work as expected?."""
@@ -133,4 +139,3 @@ def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     pc_arr.to_txt(fpath) 
 
     assert np.all(pc_arr.points == PointCloud(np.loadtxt(fpath)).points)
-
