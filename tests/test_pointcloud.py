@@ -139,3 +139,11 @@ def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     pc_arr.to_txt(fpath) 
 
     assert np.all(pc_arr.points == PointCloud(np.loadtxt(fpath)).points)
+
+
+def test_PointCloud_exports_transparently_to_las(pc_las, tmpdir):
+    """Are the points in the file output by PointCloud.to_las identical to input?"""
+    fpath = tmpdir.join('pc_las.las').strpath
+    pc_las.to_las(fpath)
+    
+    assert np.all(pc_las.points == PointCloud.from_las(fpath).points)
