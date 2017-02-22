@@ -10,18 +10,28 @@ from laspy.header import Header, VLR
 from collections import namedtuple
 from .exceptions import EmptyPointCloud
 
+_VLR_DEFAULT = {'user_id': 'LASF_Projection\x00',
+               'record_id': 34735,
+               'VLR_body': ('\x01\x00\x01\x00\x00\x00\x03\x00\x01\x04\x00'
+                            '\x00\x01\x00\x02\x00\x00\x04\x00\x00\x01\x00'
+                            '\x03\x00\x00\x08\x00\x00\x01\x00\xe6\x10'),
+               'description': 'GeoKeyDirectoryTag (mandatory)\x00\x00',
+               'reserved': 43707}
+
 class PointCloud(object):
     """ Contains point cloud data """
     
     dtype = np.float64
 
-    def __init__(self, xyz):
+    def __init__(self, xyz, header=None):
         """Store 3D point coordinates in a structured array.
         
         Arguments
         ---------
         xyz: sequence of len 3
             equal sized sequences specifying 3D point coordinates (xs, ys, zs)
+        header: laspy.header.Header instance
+            base header to use for output
         
         Example
         -------
@@ -44,6 +54,9 @@ class PointCloud(object):
         # Combine x, y and z into (flat) structured array 
         self.points = np.column_stack(xyz).ravel().view(
             dtype=[('x', self.dtype), ('y', self.dtype), ('z', self.dtype)])
+        
+        if header is not None:
+            self._header = header
 
     def __len__(self):
         """Number of points in point cloud"""
@@ -74,7 +87,7 @@ class PointCloud(object):
             file object must be open, and will remain so
         
         """
-        return PointCloud((f.x, f.y, f.z))
+        return PointCloud((f.x, f.y, f.z), header=f.header.copy())
     
     """ Instance methods """
 
@@ -102,6 +115,22 @@ class PointCloud(object):
         return Bounds(np.min(p['x']), np.min(p['y']), np.min(p['z']),
                       np.max(p['x']), np.max(p['y']), np.max(p['z']))
 
+    @property
+    def header(self):
+        """Create a valid header describing pointcloud for output to .las.
+
+        Returns
+        -------
+        header: laspy.header.Header instance
+            header cloned from input file (not updated)
+            NotImplementedError raised if pointcloud origin is not a .las file
+        
+        """
+        try:
+            return self._header
+        except(AttributeError):
+            raise NotImplementedError, "Cannot create header from scratch"
+    
     def crop(self, bounds, return_empty=False):
         """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
         
@@ -145,6 +174,20 @@ class PointCloud(object):
         """
         np.savetxt(fpath, self.arr.T)
 
+    def to_las(self, fpath):
+        """Export point cloud coordinates to .las file.
+
+        Arguments
+        ---------
+        fpath: str
+            path to file to write
+        
+        """
+        with File(fpath, mode='w', header=self.header,
+                  vlrs=[VLR(**_VLR_DEFAULT)]) as f:
+            f.x = self.points['x']
+            f.y = self.points['y']
+            f.z = self.points['z']
 
 # Container for bounds box surrounding PointCloud
 Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
