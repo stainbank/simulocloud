@@ -219,6 +219,23 @@ class PointCloud(object):
             f.y = self.points['y']
             f.z = self.points['z']
 
+    def downsample(self, n):
+        """Randomly sample the point cloud.
+        
+        Arguments
+        ---------
+        n: int
+            number of points in sample
+        
+        Returns
+        -------
+        PointCloud
+            of len n (or len of this pointcloud if it is <=n)
+        
+        """
+        n = min(n, len(self))
+        return PointCloud(np.random.choice(self.points, n, replace=False))
+
 # Container for bounds box surrounding PointCloud
 Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
 

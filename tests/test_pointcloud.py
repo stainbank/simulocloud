@@ -136,3 +136,9 @@ def test_PointCloud_exports_transparently_to_las(pc_las, tmpdir):
     pc_las.to_las(fpath)
     
     assert np.allclose(pc_las.arr, PointCloud.from_las(fpath).arr)
+
+def test_PointCloud_can_downsample(pc_las):
+    """Does downsampling a pointcloud to len n preserve n points?"""
+    n = int(len(pc_las)/10) # decimate pointcloud
+    pc = pc_las.downsample(n)
+    assert len(pc) == n and len(np.intersect1d(pc_las.points, np.unique(pc.points))) == len(pc.points)
