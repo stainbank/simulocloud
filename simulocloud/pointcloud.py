@@ -97,6 +97,20 @@ class PointCloud(object):
         return PointCloud((f.x, f.y, f.z), header=f.header.copy())
     
     """ Instance methods """
+    @property
+    def x(self):
+        """The x dimension of point coordinates."""
+        return self.points['x']
+
+    @property
+    def y(self):
+        """The y dimension of point coordinates."""
+        return self.points['y']
+
+    @property
+    def z(self):
+        """The z dimension of point coordinates."""
+        return self.points['z']
 
     @property
     def arr(self):
