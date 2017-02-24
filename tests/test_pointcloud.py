@@ -1,5 +1,6 @@
 from simulocloud import PointCloud, Bounds
 from simulocloud.exceptions import EmptyPointCloud
+from laspy.file import File
 import pytest
 import numpy as np
 import cPickle as pkl
@@ -13,31 +14,15 @@ _INPUT_DATA = [[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
                [2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9]]
 
 @pytest.fixture
-def expected_DATA_points():
-    """The points array that should be generated from input_list."""
-    return np.array([( 0. ,  1. ,  2. ),
-                     ( 0.1,  1.1,  2.1),
-                     ( 0.2,  1.2,  2.2),
-                     ( 0.3,  1.3,  2.3),
-                     ( 0.4,  1.4,  2.4),
-                     ( 0.5,  1.5,  2.5),
-                     ( 0.6,  1.6,  2.6),
-                     ( 0.7,  1.7,  2.7),
-                     ( 0.8,  1.8,  2.8),
-                     ( 0.9,  1.9,  2.9)],
-                    dtype=[('x', _DTYPE), ('y', _DTYPE), ('z', _DTYPE)])
-
-@pytest.fixture
 def input_array():
     """Simple [xs, ys, zs] numpy.ndarray of input_list."""
     return np.array(_INPUT_DATA, dtype=_DTYPE)
 
 @pytest.fixture
-def expected_las_points(fname='ALS_points.pkl'):
-    """The points array that should be generated from the example las data."""
-    with open(abspath(fname), 'rb') as o:
-        points = pkl.load(o)
-    return points
+def expected_las_arr(fname='ALS.las'):
+    """The array of points held in the example las data"""
+    with File(abspath(fname)) as f:
+        return np.array([f.x, f.y, f.z]).T
 
 @pytest.fixture
 def pc_arr(input_array):
@@ -67,17 +52,17 @@ def abspath(fname, fdir='data'):
 
 """ Test functions """
 
-def test_PointCloud_read_from_array(pc_arr, expected_DATA_points):
+def test_PointCloud_read_from_array(pc_arr, input_array):
     """Can PointCloud initialise directly from a [xs, ys, zs] array?"""
-    assert np.all(pc_arr.points == expected_DATA_points)
+    assert np.allclose(pc_arr.arr, input_array.T)
 
-def test_PointCloud_read_from_las(pc_las, expected_las_points):
+def test_PointCloud_read_from_las(pc_las, expected_las_arr):
     """Can PointCloud be constructed from a .las file?"""
-    assert np.all(pc_las.points == expected_las_points)
+    assert np.allclose(pc_las.arr, expected_las_arr)
 
 def test_arr_generation(pc_arr, input_array):
     """Does PointCloud.arr work as expected?."""
-    assert np.all(pc_arr.arr == input_array.T)
+    assert np.allclose(pc_arr.arr, input_array.T)
 
 def test_bounds_returns_accurate_boundary_box(pc_arr):
     """Does PointCloud.bounds accurately describe the bounding box?"""
@@ -90,7 +75,7 @@ def test_len_works(pc_arr):
 
 def test_cropping_with_none_bounds(pc_arr, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
-    assert np.all(pc_arr.crop(none_bounds).points == pc_arr.points)
+    assert np.allclose(pc_arr.crop(none_bounds).arr, pc_arr.arr)
 
 @pytest.mark.parametrize('c', ('x', 'y', 'z'))
 def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, c):
@@ -138,7 +123,7 @@ def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     fpath = tmpdir.join("_INPUT_DATA.txt").strpath
     pc_arr.to_txt(fpath) 
 
-    assert np.all(pc_arr.points == PointCloud(np.loadtxt(fpath)).points)
+    assert np.allclose(pc_arr.arr, PointCloud(np.loadtxt(fpath)).arr)
 
 
 def test_PointCloud_exports_transparently_to_las(pc_las, tmpdir):
@@ -146,4 +131,4 @@ def test_PointCloud_exports_transparently_to_las(pc_las, tmpdir):
     fpath = tmpdir.join('pc_las.las').strpath
     pc_las.to_las(fpath)
     
-    assert np.all(pc_las.points == PointCloud.from_las(fpath).points)
+    assert np.allclose(pc_las.arr, PointCloud.from_las(fpath).arr)
