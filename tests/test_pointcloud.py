@@ -77,21 +77,21 @@ def test_cropping_with_none_bounds(pc_arr, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
     assert np.allclose(pc_arr.crop(none_bounds).arr, pc_arr.arr)
 
-@pytest.mark.parametrize('c', ('x', 'y', 'z'))
-def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, c):
+@pytest.mark.parametrize('dim', ('x', 'y', 'z'))
+def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, dim):
     """Does PointCloud cropping preserve values at lower bounds?"""
     # Ensure a unique point used as minimum bound
-    sorted_points = np.sort(pc_arr.points, order=[c])
-    for i, minc in enumerate(sorted_points[c]):
+    sorted_points = np.sort(pc_arr.points, order=[dim])
+    for i, mindim in enumerate(sorted_points[dim]):
         if i < 1: continue # at least one point must be out of bounds
-        if minc != sorted_points[i-1][c]: 
+        if mindim != sorted_points[i-1][dim]: 
             lowest_point = sorted_points[i]
             break
     
     # Apply lower bound cropping to a single dimension
-    pc_cropped = pc_arr.crop(none_bounds._replace(**{'min'+c: minc}))
+    pc_cropped = pc_arr.crop(none_bounds._replace(**{'min'+dim: mindim}))
     
-    assert np.sort(pc_cropped.points, order=c)[0] == lowest_point
+    assert np.sort(pc_cropped.points, order=dim)[0] == lowest_point
 
 @pytest.mark.parametrize('c', ('x', 'y', 'z'))
 def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, c):
@@ -124,7 +124,6 @@ def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     pc_arr.to_txt(fpath) 
 
     assert np.allclose(pc_arr.arr, PointCloud(np.loadtxt(fpath)).arr)
-
 
 def test_PointCloud_exports_transparently_to_las(pc_las, tmpdir):
     """Are the points in the file output by PointCloud.to_las identical to input?"""
