@@ -73,6 +73,11 @@ def test_len_works(pc_arr):
     # Assumes lists in _INPUT_DATA are consistent length
     assert len(pc_arr) == len(_INPUT_DATA[0])
 
+@pytest.mark.parametrize('i,dim', [(0, 'x'), (1, 'y'), (2,'z')])
+def test_dim_attributes_are_accurate(input_array, pc_arr, i, dim):
+    """Do the x, y and z attributes retrieve the dimension array correctly?"""
+    assert np.allclose(getattr(pc_arr, dim), input_array[i])
+
 def test_cropping_with_none_bounds(pc_arr, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
     assert np.allclose(pc_arr.crop(none_bounds).arr, pc_arr.arr)
