@@ -10,6 +10,13 @@ from laspy.header import Header, VLR
 from collections import namedtuple
 from .exceptions import EmptyPointCloud
 
+_HEADER_DEFAULT = {'data_format_id': 3,
+                   'x_scale': 2.5e-4,
+                   'y_scale': 2.5e-4,
+                   'z_scale': 2.5e-4,
+                   'software_id': "simulocloud"[:32].ljust(32, '\x00'),
+                   'system_id': "CREATION"[:32].ljust(32, '\x00')}
+
 _VLR_DEFAULT = {'user_id': 'LASF_Projection\x00',
                'record_id': 34735,
                'VLR_body': ('\x01\x00\x01\x00\x00\x00\x03\x00\x01\x04\x00'
@@ -122,14 +129,23 @@ class PointCloud(object):
         Returns
         -------
         header: laspy.header.Header instance
-            header cloned from input file (not updated)
-            NotImplementedError raised if pointcloud origin is not a .las file
+            header generated from up-to-date point cloud information 
         
         """
-        try:
-            return self._header
-        except(AttributeError):
-            raise NotImplementedError, "Cannot create header from scratch"
+        header = _HEADER_DEFAULT.copy()
+        bounds = self.bounds
+        header.update({'point_return_count': [len(self), 0, 0, 0, 0],
+                       'x_offset': round(bounds.minx),
+                       'y_offset': round(bounds.miny),
+                       'z_offset': round(bounds.minz),
+                       'x_min': bounds.minx,
+                       'y_min': bounds.miny,
+                       'z_min': bounds.minz,
+                       'x_max': bounds.maxx,
+                       'y_max': bounds.maxy,
+                       'z_max': bounds.maxz})
+
+        return Header(**header)
     
     def crop(self, bounds, return_empty=False):
         """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
