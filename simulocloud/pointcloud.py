@@ -161,14 +161,17 @@ class PointCloud(object):
 
         return Header(**header)
     
-    def crop(self, bounds, return_empty=False):
+    def crop(self, minx=None, miny=None, minz=None,
+                   maxx=None, maxy=None, maxz=None,
+                   return_empty=False):
         """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
         
         Arguments
         ---------
-        bounds: `Bounds` namedtuple
-            (minx, miny, minz, maxx, maxy, maxz) to crop within
-        return_empty: bool (defaul: False)
+        minx, miny, minz, maxx, maxy, maxz: float or int (default: None)
+            minimum and maximum bounds to crop pointcloud to within
+            None results in no cropping at that bound
+        return_empty: bool (default: False)
             whether to allow empty pointclouds to be created or raise an
             EmptyPointCloud exception        
         
@@ -178,6 +181,7 @@ class PointCloud(object):
             new object containing only points within specified bounds
         
         """
+        bounds = Bounds(minx, miny, minz, maxx, maxy, maxz)
         # Build results using generator to limit memory usage
         out_of_bounds = np.zeros(len(self))
         for comparison in iter_out_of_bounds(self.points, bounds):

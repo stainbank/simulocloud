@@ -80,7 +80,7 @@ def test_dim_attributes_are_accurate(input_array, pc_arr, i, dim):
 
 def test_cropping_with_none_bounds(pc_arr, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
-    assert np.allclose(pc_arr.crop(none_bounds).arr, pc_arr.arr)
+    assert np.allclose(pc_arr.crop(*none_bounds).arr, pc_arr.arr)
 
 @pytest.mark.parametrize('dim', ('x', 'y', 'z'))
 def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, dim):
@@ -94,7 +94,7 @@ def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, dim):
             break
     
     # Apply lower bound cropping to a single dimension
-    pc_cropped = pc_arr.crop(none_bounds._replace(**{'min'+dim: mindim}))
+    pc_cropped = pc_arr.crop(**{'min'+dim: mindim})
     
     assert np.sort(pc_cropped.points, order=dim)[0] == lowest_point
 
@@ -109,7 +109,7 @@ def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, c):
             highest_point = rev_sorted_points[i+1]
             break
     # Apply upper bound cropping to a single dimension
-    pc_arr = pc_arr.crop(none_bounds._replace(**{'max'+c: maxc}))
+    pc_arr = pc_arr.crop(**{'max'+c: maxc})
     
     assert (np.sort(pc_arr.points, order=c)[-1] == highest_point) and (
            oob_point not in pc_arr.points)
@@ -117,11 +117,11 @@ def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, c):
 def test_cropping_to_nothing_raises_exception_when_specified(pc_arr, inf_bounds):
     """Does PointCloud cropping refuse to return an empty PointCloud?"""
     with pytest.raises(EmptyPointCloud):
-        pc_arr.crop(inf_bounds, return_empty=False)
+        pc_arr.crop(*inf_bounds, return_empty=False)
 
 def test_cropping_to_nothing_returns_empty(pc_arr, inf_bounds):
     """Does PointCloud cropping return an empty PointCloud when asked?"""
-    assert not len(pc_arr.crop(inf_bounds, return_empty=True))
+    assert not len(pc_arr.crop(*inf_bounds, return_empty=True))
 
 def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     """Is the file output by PointCloud.to_txt identical to the input?"""
