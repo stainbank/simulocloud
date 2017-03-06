@@ -5,9 +5,9 @@ See, plot and visually explore pointclouds
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from itertools import izip
-from .exceptions import BadAxes, InvalidAxesDims
+from .exceptions import BadDims, WrongNDims
 
-def scatter(pcs, axes, bounds=None, n=10000, colours=None, labels=None,
+def scatter(pcs, dims, bounds=None, n=10000, colours=None, labels=None,
             title=None, figsize=(6,6)):
     """Create a scatter plot of one or more point clouds in 2D or 3D.
     
@@ -15,7 +15,7 @@ def scatter(pcs, axes, bounds=None, n=10000, colours=None, labels=None,
     ----------
     pcs: iterable of PointCloud instances
         point clouds to plot
-    axes: str
+    dims: str
         dimensions to plot on x, y (and optionally z) axes
         e.g. 'xz' -> x vs z (i.e. 2D cross-section); 'xyz' -> x vs y vs z (3D)
     bounds: pointcloud.Bounds namedtuple (optional)
@@ -37,15 +37,15 @@ def scatter(pcs, axes, bounds=None, n=10000, colours=None, labels=None,
     matplotlib.figure.Figure instance
     
     """
-    # Parse axes as 2D or 3D
+    # Parse dims as 2D or 3D
     try:
-        axes = axes.lower()
-        ndims = len(axes)
+        dims = dims.lower()
+        ndims = len(dims)
         projection = {2: None, 3: '3d'}[ndims]
     except(AttributeError):
-        raise BadAxes('axes must be str (not {})'.format(type(axes))) 
+        raise BadDims('dims must be str (not {})'.format(type(dims))) 
     except(KeyError): 
-        raise InvalidAxesDims('axes must have either 2 or 3 dims (had {})'.format(ndims))
+        raise WrongNDims('dims must have either 2 or 3 dims (had {})'.format(ndims))
      
     # Set up figure
     fig = plt.figure(figsize=figsize)
@@ -54,21 +54,21 @@ def scatter(pcs, axes, bounds=None, n=10000, colours=None, labels=None,
     
     # Draw plots
     pcs = _crop_and_sample_pointclouds(pcs, bounds, n)
-    for arrs, kwargs in _iter_scatter_args(pcs, axes, colours, labels):
+    for arrs, kwargs in _iter_scatter_args(pcs, dims, colours, labels):
         ax.scatter(s=2, edgecolors='none', *arrs, **kwargs)
     
     # Annotate figure
     ax.legend()
-    ax.set_xlabel(axes[0].upper())
-    ax.set_ylabel(axes[1].upper())
+    ax.set_xlabel(dims[0].upper())
+    ax.set_ylabel(dims[1].upper())
     if ndims == 3:
-        ax.set_zlabel(axes[2].upper())
+        ax.set_zlabel(dims[2].upper())
     if title is not None:
         ax.set_title(title)
      
     return fig
 
-def _iter_scatter_args(pcs, axes, colours, labels):
+def _iter_scatter_args(pcs, dims, colours, labels):
     """Yield plotting arrays and matplotlib scatter kwargs per pointcloud."""
     # Generate defaults
     if colours is None:
@@ -77,7 +77,7 @@ def _iter_scatter_args(pcs, axes, colours, labels):
         labels = _iteralphabet()
         
     for pc, colour, label in izip(pcs, colours, labels):
-        arrs = (pc.points[dim.lower()] for dim in axes) # extract coordinates
+        arrs = (pc.points[dim.lower()] for dim in dims) # extract coordinates
         kwargs = {'c': colour,
                   'label': label}
         yield arrs, kwargs

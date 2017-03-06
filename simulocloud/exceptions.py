@@ -20,14 +20,14 @@ class EmptyPointCloud(PointcloudException, ValueError):
     """An empty PointCloud would be created against user wishes."""
     pass
 
-class AxesError(VisualiseException):
-    """Base exception for errors relating to the axes argument."""
+class DimsError(VisualiseException):
+    """Base exception for errors relating to the dims argument."""
     pass
 
-class InvalidAxesDims(AxesError, ValueError):
-    """When axes argument is not two or three dimensions."""
+class WrongNDims(DimsError, ValueError):
+    """When dims argument does not present two or three dimensions."""
     pass
 
-class BadAxes(AxesError, TypeError):
-    """When axes argument is not a string"""
+class BadDims(DimsError, TypeError):
+    """When dims argument is not a string"""
     pass
