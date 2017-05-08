@@ -98,7 +98,7 @@ class PointCloud(object):
             file object must be open, and will remain so
         
         """
-        return PointCloud((f.x, f.y, f.z), header=f.header.copy())
+        return cls((f.x, f.y, f.z), header=f.header.copy())
 
     @classmethod
     def from_None(cls):
@@ -199,12 +199,12 @@ class PointCloud(object):
         # Deal with empty pointclouds
         if out_of_bounds.all():
             if return_empty:
-                return PointCloud(None)
+                return type(self)(None)
             else:
                 raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
                                             bounds)
          
-        return PointCloud(self.points[~out_of_bounds])
+        return type(self)(self.points[~out_of_bounds])
 
     def to_txt(self, fpath):
         """Export point cloud coordinates as 3-column (xyz) ASCII file.
@@ -247,7 +247,7 @@ class PointCloud(object):
         
         """
         n = min(n, len(self))
-        return PointCloud(np.random.choice(self.points, n, replace=False))
+        return type(self)(np.random.choice(self.points, n, replace=False))
 
 # Container for bounds box surrounding PointCloud
 Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
