@@ -12,6 +12,22 @@ class PointcloudException(SimulocloudException):
     pass
 
 
+class VisualiseException(SimulocloudException):
+    """Base exception for the visualise module."""
+    pass
+
 class EmptyPointCloud(PointcloudException, ValueError):
     """An empty PointCloud would be created against user wishes."""
+    pass
+
+class DimsError(VisualiseException):
+    """Base exception for errors relating to the dims argument."""
+    pass
+
+class WrongNDims(DimsError, ValueError):
+    """When dims argument does not present two or three dimensions."""
+    pass
+
+class BadDims(DimsError, TypeError):
+    """When dims argument is not a string"""
     pass
