@@ -58,6 +58,10 @@ class PointCloud(object):
         -----
         The use of the constructor methods (`PointCloud.from...`) is preferred.
         """
+        # Coerce None to empty array
+        if xyz is None:
+            xyz = [[], [], []]
+
         # Combine x, y and z into (flat) structured array 
         self.points = np.column_stack(xyz).ravel().view(
             dtype=[('x', self.dtype), ('y', self.dtype), ('z', self.dtype)])
@@ -95,7 +99,12 @@ class PointCloud(object):
         
         """
         return PointCloud((f.x, f.y, f.z), header=f.header.copy())
-    
+
+    @classmethod
+    def from_None(cls):
+        """Initialise an empty PointCloud."""
+        return cls(None)
+
     """ Instance methods """
     @property
     def x(self):
@@ -190,7 +199,7 @@ class PointCloud(object):
         # Deal with empty pointclouds
         if out_of_bounds.all():
             if return_empty:
-                return PointCloud([[], [], []])
+                return PointCloud(None)
             else:
                 raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
                                             bounds)

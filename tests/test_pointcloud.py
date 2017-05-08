@@ -60,6 +60,10 @@ def test_PointCloud_read_from_las(pc_las, expected_las_arr):
     """Can PointCloud be constructed from a .las file?"""
     assert np.allclose(pc_las.arr, expected_las_arr)
 
+def test_empty_PointCloud():
+    """Is the PointCloud generated from `None` empty?"""
+    assert not len(PointCloud(None))
+
 def test_arr_generation(pc_arr, input_array):
     """Does PointCloud.arr work as expected?."""
     assert np.allclose(pc_arr.arr, input_array.T)
