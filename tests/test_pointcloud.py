@@ -30,6 +30,11 @@ def pc_arr(input_array):
     return PointCloud(input_array)
 
 @pytest.fixture
+def pc_arr_x10(pc_arr):
+    """Multiply pc_arr values by 10."""
+    return PointCloud((pc_arr.arr*10).T)
+
+@pytest.fixture
 def pc_las(fname='ALS.las'):
     """Set up a PointCloud instance using test data"""
     return PointCloud.from_las(abspath(fname))
@@ -76,6 +81,17 @@ def test_len_works(pc_arr):
     """Does __len__() report the correct number of points?"""
     # Assumes lists in _INPUT_DATA are consistent length
     assert len(pc_arr) == len(_INPUT_DATA[0])
+
+def test_PointCloud_addition_len(pc_arr):
+    """Does PointCloud addition combine the arrays?"""
+    pc = pc_arr + pc_arr
+    assert len(pc) == len(pc_arr)*2
+
+def test_PointCloud_addition_values(pc_arr, pc_arr_x10):
+    """Does PointCloud addition combine the values appropriately?"""
+    pc = pc_arr + pc_arr_x10
+    # Mins from small, maxs from big
+    assert (pc.bounds[:3] == pc_arr.bounds[:3]) and (pc.bounds[3:] == pc_arr_x10.bounds[3:])
 
 @pytest.mark.parametrize('i,dim', [(0, 'x'), (1, 'y'), (2,'z')])
 def test_dim_attributes_are_accurate(input_array, pc_arr, i, dim):
