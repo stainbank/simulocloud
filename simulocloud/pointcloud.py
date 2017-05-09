@@ -80,17 +80,25 @@ class PointCloud(object):
     """ Constructor methods """
  
     @classmethod
-    def from_las(cls, fpath):
-        """Initialise PointCloud from .las file.
+    def from_las(cls, *fpaths):
+        """Initialise PointCloud from one or more .las files.
     
         Arguments
         ---------
-        fpath: str
-            filepath of .las file containing 3D point coordinates
+        fpaths: str
+            filepaths of .las file containing 3D point coordinates
        
         """
-        with File(fpath) as f:
-            return cls.from_laspy_File(f)
+        if len(fpaths) > 1:
+            # Iteratively build PointCloud by addition
+            pc = cls(None) # empty pointcloud
+            for fpath in fpaths:
+                with File(fpath) as f:
+                    pc += cls.from_laspy_File(f)
+            return pc
+        else:
+            with File(fpaths[0]) as f:
+                return cls.from_laspy_File(f)
 
     @classmethod
     def from_laspy_File(cls, f):
