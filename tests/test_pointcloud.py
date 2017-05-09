@@ -36,8 +36,14 @@ def pc_arr_x10(pc_arr):
 
 @pytest.fixture
 def pc_las(fname='ALS.las'):
-    """Set up a PointCloud instance using test data"""
+    """Set up a PointCloud instance using single file test data."""
     return PointCloud.from_las(abspath(fname))
+
+@pytest.fixture
+def pc_multilas(fdir='ALS_tiles'):
+    """Set up a PointCloud instance using multiple file test data, tiled from pc_las."""
+    fpaths = [abspath(fname, os.path.join('data', fdir)) for fname in os.listdir(abspath(fdir))]
+    return PointCloud.from_las(*fpaths)
 
 @pytest.fixture
 def none_bounds():
@@ -61,9 +67,13 @@ def test_PointCloud_read_from_array(pc_arr, input_array):
     """Can PointCloud initialise directly from a [xs, ys, zs] array?"""
     assert np.allclose(pc_arr.arr, input_array.T)
 
-def test_PointCloud_read_from_las(pc_las, expected_las_arr):
-    """Can PointCloud be constructed from a .las file?"""
+def test_PointCloud_read_from_single_las(pc_las, expected_las_arr):
+    """Can PointCloud be constructed from a single .las file?"""
     assert np.allclose(pc_las.arr, expected_las_arr)
+
+def test_PointCloud_from_multiple_las(pc_multilas, pc_las):
+    """Can PointCloud be constructed from multiple .las files?"""
+    assert len(pc_multilas) == len(pc_las)
 
 def test_empty_PointCloud():
     """Is the PointCloud generated from `None` empty?"""
