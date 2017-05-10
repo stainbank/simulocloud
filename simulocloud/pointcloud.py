@@ -92,15 +92,9 @@ class PointCloud(object):
        
         """
         if len(fpaths) > 1:
-            # Iteratively build PointCloud by addition
-            pc = cls(None) # empty pointcloud
-            for fpath in fpaths:
-                with File(fpath) as f:
-                    pc += cls.from_laspy_File(f)
-            return pc
+           return cls(_combine_las(*fpaths))
         else:
-            with File(fpaths[0]) as f:
-                return cls.from_laspy_File(f)
+            return cls(_get_las_xyz(fpaths[0]))
 
     @classmethod
     def from_laspy_File(cls, f):
@@ -266,6 +260,34 @@ class PointCloud(object):
 # Container for bounds box surrounding PointCloud
 Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
 
+def _combine_las(*fpaths):
+    """Efficiently combine las files to a single [xs, ys, zs] array."""
+    sizes = {fpath: _get_las_npoints(fpath) for fpath in fpaths}
+    npoints = sum(sizes.values())
+    arr = np.empty((3, npoints), dtype = _DTYPE) # initialise array
+    
+    # Fill array piece by piece
+    i = 0 # start point
+    for fpath, size in sizes.iteritems():
+        j = i + size # end point
+        arr[:,i:j] = _get_las_xyz(fpath)
+        i = j
+    return arr
+
+def _get_las_npoints(fpath):
+    """Return the number of points in a .las file.
+    
+    Note: npoints is read from the file's header, which is not guuaranteed
+          to be at all accurate. This may be a source of error.
+    """
+    with File(fpath) as f:
+        return f.header.count
+
+def _get_las_xyz(fpath):
+    """Return [x, y, z] list of coordinate arrays from .las file."""
+    with File(fpath) as f:
+        return [f.x, f.y, f.z]
+
 def iter_out_of_bounds(points, bounds):
     """Iteratively determine point coordinates outside of bounds.
 
@@ -300,3 +322,5 @@ def iter_out_of_bounds(points, bounds):
             yield np.zeros_like(points[c], dtype=bool)
         else:
             yield compare(points[c], bound)
+
+
