@@ -25,10 +25,12 @@ _VLR_DEFAULT = {'user_id': 'LASF_Projection\x00',
                'description': 'GeoKeyDirectoryTag (mandatory)\x00\x00',
                'reserved': 43707}
 
+_DTYPE = np.float64
+
 class PointCloud(object):
     """ Contains point cloud data """
     
-    dtype = np.float64
+    dtype = _DTYPE
 
     def __init__(self, xyz, header=None):
         """Store 3D point coordinates in a structured array.
