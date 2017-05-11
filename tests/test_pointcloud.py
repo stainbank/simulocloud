@@ -75,6 +75,10 @@ def test_PointCloud_from_multiple_las(pc_multilas, pc_las):
     """Can PointCloud be constructed from multiple .las files?"""
     assert len(pc_multilas) == len(pc_las)
 
+def test_PointCloud_from_tiles():
+    """Can a specific-area PointCloud be constructed from multiple .las files?"""
+    assert False # Haven't written test yet
+
 def test_empty_PointCloud():
     """Is the PointCloud generated from `None` empty?"""
     assert not len(PointCloud(None))

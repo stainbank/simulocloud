@@ -97,6 +97,24 @@ class PointCloud(object):
             return cls(_get_las_xyz(fpaths[0]))
 
     @classmethod
+    def from_tiles(cls, bounds, *fpaths):
+        """Initialise PointCloud conforming to bounds from one or more .las files.
+
+        Arguments
+        ---------
+        bounds: tuple or `Bounds` namedtuple
+            (minx, miny, minz, maxx, maxy, maxz) bounds of tile
+        fpaths: str
+            filepaths of .las file containing 3D point coordinates
+        
+        """
+        bounds = _nones_to_infs(bounds)
+        # Determine which tiles intersect bounds
+        tiles = [fpath for fpath in fpaths
+                 if _intersects_3D(bounds, _get_las_bounds(fpath))] 
+        return cls.from_las(*tiles).crop(*bounds) 
+
+    @classmethod
     def from_laspy_File(cls, f):
         """Initialise PointCloud from a laspy File.
         
@@ -287,6 +305,29 @@ def _get_las_xyz(fpath):
     """Return [x, y, z] list of coordinate arrays from .las file."""
     with File(fpath) as f:
         return [f.x, f.y, f.z]
+
+def _get_las_bounds(fpath):
+    """Return the bounds of file at fpath."""
+    with File(fpath) as f:
+        return Bounds(*(f.header.min + f.header.max))
+
+def _intersects_1D(A, B):
+    """True if (min, max) tuples intersect."""
+    return False if (B[1] <= A[0]) or (B[0] >= A[1]) else True
+
+def _intersects_3D(A, B):
+    """True if bounds A and B intersect."""
+    return all([_intersects_1D((A[i], A[i+3]), (B[i], B[i+3]))
+                for i in range(3)])
+
+def _nones_to_infs(bounds):
+    """Replace any instance of None in `bounds` with appropriate inf."""
+    new = []
+    for i, d in enumerate(bounds):
+        if d is None: # mins -> -inf; maxs -> inf
+            d = -np.inf if i < 3 else np.inf
+        new.append(d)
+    return Bounds(*new)
 
 def iter_out_of_bounds(points, bounds):
     """Iteratively determine point coordinates outside of bounds.
