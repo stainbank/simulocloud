@@ -42,8 +42,7 @@ def pc_las(fname='ALS.las'):
 @pytest.fixture
 def pc_multilas(fdir='ALS_tiles'):
     """Set up a PointCloud instance using multiple file test data, tiled from pc_las."""
-    fpaths = [abspath(fname, os.path.join('data', fdir)) for fname in os.listdir(abspath(fdir))]
-    return PointCloud.from_las(*fpaths)
+    return PointCloud.from_las(*get_fpaths(fdir))
 
 @pytest.fixture
 def none_bounds():
@@ -60,6 +59,10 @@ def inf_bounds():
 def abspath(fname, fdir='data'):
     """Return the absolute filepath of filename in (relative) directory."""
     return os.path.join(os.path.dirname(__file__), fdir, fname)
+
+def get_fpaths(fdir):
+    """Return a list of .las files in fdir."""
+    return [abspath(fname, os.path.join('data', fdir)) for fname in os.listdir(abspath(fdir))]
 
 """ Test functions """
 
