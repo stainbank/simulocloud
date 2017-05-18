@@ -73,7 +73,7 @@ class PointCloud(object):
 
     def __len__(self):
         """Number of points in point cloud"""
-        return len(self.arr)
+        return self.arr.shape[1]
 
     def __add__(self, other):
         """Concatenate two PointClouds."""
