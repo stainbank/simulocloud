@@ -22,7 +22,7 @@ def input_array():
 def expected_las_arr(fname='ALS.las'):
     """The array of points held in the example las data"""
     with File(abspath(fname)) as f:
-        return np.array([f.x, f.y, f.z]).T
+        return np.array([f.x, f.y, f.z])
 
 @pytest.fixture
 def pc_arr(input_array):
@@ -32,7 +32,7 @@ def pc_arr(input_array):
 @pytest.fixture
 def pc_arr_x10(pc_arr):
     """Multiply pc_arr values by 10."""
-    return PointCloud((pc_arr.arr*10).T)
+    return PointCloud((pc_arr.arr*10))
 
 @pytest.fixture
 def pc_las(fname='ALS.las'):
@@ -68,7 +68,7 @@ def get_fpaths(fdir):
 
 def test_PointCloud_read_from_array(pc_arr, input_array):
     """Can PointCloud initialise directly from a [xs, ys, zs] array?"""
-    assert np.allclose(pc_arr.arr, input_array.T)
+    assert np.allclose(pc_arr.arr, input_array)
 
 def test_PointCloud_read_from_single_las(pc_las, expected_las_arr):
     """Can PointCloud be constructed from a single .las file?"""
@@ -91,7 +91,7 @@ def test_empty_PointCloud():
 
 def test_arr_generation(pc_arr, input_array):
     """Does PointCloud.arr work as expected?."""
-    assert np.allclose(pc_arr.arr, input_array.T)
+    assert np.allclose(pc_arr.arr, input_array)
 
 def test_bounds_returns_accurate_boundary_box(pc_arr):
     """Does PointCloud.bounds accurately describe the bounding box?"""
