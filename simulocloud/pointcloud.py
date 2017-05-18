@@ -73,11 +73,11 @@ class PointCloud(object):
 
     def __len__(self):
         """Number of points in point cloud"""
-        return len(self.points)
+        return len(self.arr)
 
     def __add__(self, other):
         """Concatenate two PointClouds."""
-        return type(self)(np.concatenate([self.arr, other.arr]).T)
+        return type(self)(np.concatenate([self.arr, other.arr], axis=1))
 
     """ Constructor methods """
  
@@ -135,17 +135,17 @@ class PointCloud(object):
     @property
     def x(self):
         """The x dimension of point coordinates."""
-        return self.points['x']
+        return self.arr[0]
 
     @property
     def y(self):
         """The y dimension of point coordinates."""
-        return self.points['y']
+        return self.arr[1]
 
     @property
     def z(self):
         """The z dimension of point coordinates."""
-        return self.points['z']
+        return self.arr[2]
 
     @property
     def points(self):
@@ -153,7 +153,7 @@ class PointCloud(object):
         
         Returns
         -------
-        np.ndarray with shape (npoints, 3)
+        structured np.ndarray containing 'x', 'y' and 'z' point coordinates
     
         """
         return self.arr.T.ravel().view(
@@ -168,9 +168,10 @@ class PointCloud(object):
         namedtuple (minx, miny, minz, maxx, maxy, maxz)
         
         """
-        p = self.points
-        return Bounds(np.min(p['x']), np.min(p['y']), np.min(p['z']),
-                      np.max(p['x']), np.max(p['y']), np.max(p['z']))
+        x,y,z = self.arr
+        return Bounds(x.min(), y.min(), z.min(),
+                      x.max(), y.max(), z.max())
+
 
     @property
     def header(self):
@@ -220,7 +221,7 @@ class PointCloud(object):
         bounds = Bounds(minx, miny, minz, maxx, maxy, maxz)
         # Build results using generator to limit memory usage
         out_of_bounds = np.zeros(len(self))
-        for comparison in iter_out_of_bounds(self.points, bounds):
+        for comparison in iter_out_of_bounds(self, bounds):
             out_of_bounds = np.logical_or(comparison, out_of_bounds)
         
         # Deal with empty pointclouds
@@ -255,9 +256,7 @@ class PointCloud(object):
         """
         with File(fpath, mode='w', header=self.header,
                   vlrs=[VLR(**_VLR_DEFAULT)]) as f:
-            f.x = self.points['x']
-            f.y = self.points['y']
-            f.z = self.points['z']
+            f.x, f.y, f.z = self.arr
 
     def downsample(self, n):
         """Randomly sample the point cloud.
@@ -330,13 +329,12 @@ def _nones_to_infs(bounds):
         new.append(d)
     return Bounds(*new)
 
-def iter_out_of_bounds(points, bounds):
+def iter_out_of_bounds(pc, bounds):
     """Iteratively determine point coordinates outside of bounds.
 
     Arguments
     ---------
-    points: numpy.ndarray
-        structured array containing 'x', 'y' and 'z' point coordinates
+    pc: `PointCloud` instance
     bounds: `Bounds` namedtuple
         (minx, miny, minz, maxx, maxy, maxz) to test point coordinates against
     
@@ -361,8 +359,8 @@ def iter_out_of_bounds(points, bounds):
     
     for compare, c, bound in zip(comparison_funcs, coords, bounds):
         if bound is None: # None is a permissive bound
-            yield np.zeros_like(points[c], dtype=bool)
+            yield np.zeros_like(getattr(pc, c), dtype=bool)
         else:
-            yield compare(points[c], bound)
+            yield compare(getattr(pc, c), bound)
 
 
