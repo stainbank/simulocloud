@@ -62,7 +62,7 @@ class PointCloud(object):
         """
         # Coerce None to empty array
         if xyz is None:
-            x, y, z = [[], [], []]
+            xyz = [[], [], []]
         
         # Store points as 3*n array
         x, y, z = xyz # ensure only 3 coordinates
