@@ -33,7 +33,7 @@ class PointCloud(object):
     dtype = _DTYPE
 
     def __init__(self, xyz, header=None):
-        """Store 3D point coordinates in a structured array.
+        """Create PointCloud with 3D point coordinates stored in a (3*n) array.
         
         Arguments
         ---------
@@ -62,12 +62,12 @@ class PointCloud(object):
         """
         # Coerce None to empty array
         if xyz is None:
-            xyz = [[], [], []]
-
-        # Combine x, y and z into (flat) structured array 
-        self.points = np.column_stack(xyz).ravel().view(
-            dtype=[('x', self.dtype), ('y', self.dtype), ('z', self.dtype)])
+            x, y, z = [[], [], []]
         
+        # Store points as 3*n array
+        x, y, z = xyz # ensure only 3 coordinates
+        self.arr = np.stack([x, y, z])
+
         if header is not None:
             self._header = header
 
@@ -148,15 +148,16 @@ class PointCloud(object):
         return self.points['z']
 
     @property
-    def arr(self):
-        """Get point coordinates as unstructured n*3 array).
+    def points(self):
+        """Get point coordinates as a structured n*3 array).
         
         Returns
         -------
         np.ndarray with shape (npoints, 3)
     
         """
-        return self.points.view(self.dtype).reshape(-1, 3)
+        return self.arr.T.ravel().view(
+               dtype=[('x', self.dtype), ('y', self.dtype), ('z', self.dtype)])
 
     @property
     def bounds(self):
