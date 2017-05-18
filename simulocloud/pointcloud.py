@@ -232,7 +232,7 @@ class PointCloud(object):
                 raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
                                             bounds)
          
-        return type(self)(self.points[~out_of_bounds])
+        return type(self)(self.arr[:, ~out_of_bounds])
 
     def to_txt(self, fpath):
         """Export point cloud coordinates as 3-column (xyz) ASCII file.
