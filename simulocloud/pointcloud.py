@@ -273,7 +273,8 @@ class PointCloud(object):
         
         """
         n = min(n, len(self))
-        return type(self)(np.random.choice(self.points, n, replace=False))
+        idx = np.random.choice(len(self), n, replace=False)
+        return type(self)(self.arr[:, idx])
 
 # Container for bounds box surrounding PointCloud
 Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
