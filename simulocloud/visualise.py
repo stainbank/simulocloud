@@ -93,7 +93,7 @@ def _iter_scatter_args(pcs, dims, colours, labels):
         labels = _iteralphabet()
         
     for pc, colour, label in izip(pcs, colours, labels):
-        arrs = (pc.points[dim.lower()] for dim in dims) # extract coordinates
+        arrs = (getattr(pc, dim.lower()) for dim in dims) # extract coordinates
         kwargs = {'c': colour,
                   'label': label}
         yield arrs, kwargs
