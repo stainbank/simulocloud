@@ -235,20 +235,17 @@ class PointCloud(object):
         
         """
         bounds = Bounds(minx, miny, minz, maxx, maxy, maxz)
-        # Build results using generator to limit memory usage
-        out_of_bounds = np.zeros(len(self))
-        for comparison in iter_out_of_bounds(self, bounds):
-            out_of_bounds = np.logical_or(comparison, out_of_bounds)
+        oob = are_out_of_bounds(self, bounds)
         
         # Deal with empty pointclouds
-        if out_of_bounds.all():
+        if oob.all():
             if return_empty:
                 return type(self)(None)
             else:
                 raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
-                                            bounds)
+                                        bounds)
          
-        return type(self)(self.arr[:, ~out_of_bounds])
+        return type(self)(self.arr[:, ~oob])
 
     def to_txt(self, fpath):
         """Export point cloud coordinates as 3-column (xyz) ASCII file.
@@ -355,7 +352,7 @@ def _nones_to_infs(bounds):
         new.append(d)
     return Bounds(*new)
 
-def iter_out_of_bounds(pc, bounds):
+def _iter_out_of_bounds(pc, bounds):
     """Iteratively determine point coordinates outside of bounds.
 
     Arguments
@@ -389,4 +386,23 @@ def iter_out_of_bounds(pc, bounds):
         else:
             yield compare(getattr(pc, c), bound)
 
-
+def are_out_of_bounds(pc, bounds):
+    """ Determine whether each point in pc is out of bounds
+    
+    Arguments
+    ---------
+    pc: `PointCloud` instance
+    bounds: `Bounds` namedtuple
+        (minx, miny, minz, maxx, maxy, maxz) to test point coordinates against
+    
+    Returns
+    -------
+    `numpy.ndarray` (shape=(len(pc),))
+        bools specifying whether any of the (x, y, z) dimensions of points
+        in `pc` are outside of the specified `bounds`
+    
+    """
+    oob = np.zeros(len(pc))
+    for comparison in _iter_out_of_bounds(pc, bounds):
+        oob = np.logical_or(comparison, oob)
+    return oob
