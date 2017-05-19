@@ -127,6 +127,22 @@ class PointCloud(object):
         return cls((f.x, f.y, f.z), header=f.header.copy())
 
     @classmethod
+    def from_txt(cls, *fpaths):
+        """Initialise PointCloud from a plaintext file.
+
+        Arguments
+        ---------
+        fpaths: str
+            filepath of an ASCII 3-column (xyz) whitespace-delimited
+            .txt (aka .xyz) file
+       
+        """
+        if len(fpaths) > 1:
+            raise NotImplementedError
+        else:
+            return cls(np.loadtxt(*fpaths).T)
+
+    @classmethod
     def from_None(cls):
         """Initialise an empty PointCloud."""
         return cls(None)
