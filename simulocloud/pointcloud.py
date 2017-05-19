@@ -276,8 +276,17 @@ class PointCloud(object):
         idx = np.random.choice(len(self), n, replace=False)
         return type(self)(self.arr[:, idx])
 
-# Container for bounds box surrounding PointCloud
-Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
+
+class Bounds(namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])):
+    """`namedtuple` describing the bounds box surrounding PointCloud."""
+    __slots__ = ()
+    _format = '{:.3g}'
+
+    def __str__(self):
+        template = ('Bounds: minx={f}, miny={f}, minz={f} \n        '
+                    'maxx={f}, maxy={f}, maxz={f}'.format(f=self._format))
+        return template.format(*self)
+
 
 def _combine_las(*fpaths):
     """Efficiently combine las files to a single [xs, ys, zs] array."""
