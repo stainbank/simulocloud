@@ -1,5 +1,6 @@
 from simulocloud import PointCloud, Bounds
 from simulocloud.exceptions import EmptyPointCloud
+from simulocloud.pointcloud import merge
 from laspy.file import File
 import pytest
 import numpy as np
@@ -96,7 +97,6 @@ def test_arr_generation(pc_arr, input_array):
 def test_bounds_returns_accurate_boundary_box(pc_arr):
     """Does PointCloud.bounds accurately describe the bounding box?"""
     assert pc_arr.bounds == tuple((f(c) for f in (min, max) for c in _INPUT_DATA)) 
-
 def test_len_works(pc_arr):
     """Does __len__() report the correct number of points?"""
     # Assumes lists in _INPUT_DATA are consistent length
@@ -182,3 +182,13 @@ def test_PointCloud_can_downsample(pc_las):
     n = int(len(pc_las)/10) # decimate pointcloud
     pc = pc_las.downsample(n)
     assert len(pc) == n and len(np.intersect1d(pc_las.points, np.unique(pc.points))) == len(pc.points)
+
+def test_pointclouds_merged_by_function(pc_las, fdir='ALS_tiles'):
+    pcs = [PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
+    merged = merge(PointCloud, *pcs)
+    assert (len(merged) == len(pc_las)) and (merged.bounds == pc_las.bounds)
+
+def test_pointclouds_merged_by_method(pc_las, fdir='ALS_tiles'):
+    pcs = [PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
+    merged = pcs.pop().merge(*pcs)
+    assert (len(merged) == len(pc_las)) and (merged.bounds == pc_las.bounds)

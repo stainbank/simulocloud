@@ -290,6 +290,16 @@ class PointCloud(object):
         return type(self)(self.arr[:, idx])
 
 
+    def merge(self, *pointclouds):
+        """Merge this pointcloud with other instances.
+        
+        Arguments
+        ---------
+        *pointclouds: `PointCloud` instances
+        
+        """
+        return merge(type(self), self, *pointclouds)
+
 class Bounds(namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])):
     """`namedtuple` describing the bounds box surrounding PointCloud."""
     __slots__ = ()
@@ -417,3 +427,22 @@ def are_out_of_bounds(pc, bounds):
     for comparison in _iter_out_of_bounds(pc, bounds):
         oob = np.logical_or(comparison, oob)
     return oob
+
+def merge(cls, *pointclouds):
+    """Return an instance of `cls` containing merged `pointclouds`.
+    
+    Arguments
+    ---------
+    cls: `PointCloud` class (or subclass)
+    *pointclouds: instances of `PointCloud` (or subclass)
+    """
+    sizes = [len(pc) for pc in pointclouds]
+    arr = np.empty((3, sum(sizes)), dtype=_DTYPE)
+    
+    # Build up array from pcs
+    i = 0
+    for pc, size in zip(pointclouds, sizes):
+        j = i + size
+        arr[:,i:j] = pc.arr
+        i = j
+    return cls(arr)
