@@ -108,7 +108,7 @@ class PointCloud(object):
             filepaths of .las file containing 3D point coordinates
         
         """
-        bounds = _nones_to_infs(bounds)
+        bounds = Bounds(*bounds)
         # Determine which tiles intersect bounds
         tiles = [fpath for fpath in fpaths
                  if _intersects_3D(bounds, _get_las_bounds(fpath))] 
@@ -295,6 +295,28 @@ class Bounds(namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz
     __slots__ = ()
     _format = '{:.3g}'
 
+    def __new__(cls, minx, miny, minz, maxx, maxy, maxz):
+        """Create new instance of Bounds(minx, miny, minz, maxx, maxy, maxz)
+        
+        Args
+        ----
+        minx, miny, minz, maxx, maxy, maxz: numeric or None
+            minimum or maximum bounds in each dimension
+            None will be coerced to -numpy.inf (mins) or numpy.inf (maxes)
+        
+        """
+        # Coerce bounds to floats, and nones to infs
+        kwargs = locals()
+        for b, inf in zip(('min', 'max'),
+                          (-np.inf, np.inf)):
+            for dim in 'xyz':
+                bound = b + dim
+                value = kwargs[bound]
+                kwargs[bound] = inf if value is None else float(value)
+        
+        kwargs.pop('cls') # must be passed positionally
+        return super(cls, cls).__new__(cls, **kwargs)
+
     def __str__(self):
         template = ('Bounds: minx={f}, miny={f}, minz={f} \n        '
                     'maxx={f}, maxy={f}, maxz={f}'.format(f=self._format))
@@ -343,15 +365,6 @@ def _intersects_3D(A, B):
     return all([_intersects_1D((A[i], A[i+3]), (B[i], B[i+3]))
                 for i in range(3)])
 
-def _nones_to_infs(bounds):
-    """Replace any instance of None in `bounds` with appropriate inf."""
-    new = []
-    for i, d in enumerate(bounds):
-        if d is None: # mins -> -inf; maxs -> inf
-            d = -np.inf if i < 3 else np.inf
-        new.append(d)
-    return Bounds(*new)
-
 def _iter_out_of_bounds(pc, bounds):
     """Iteratively determine point coordinates outside of bounds.
 
@@ -381,10 +394,8 @@ def _iter_out_of_bounds(pc, bounds):
     coords = ('x', 'y', 'z')*2
     
     for compare, c, bound in zip(comparison_funcs, coords, bounds):
-        if bound is None: # None is a permissive bound
-            yield np.zeros_like(getattr(pc, c), dtype=bool)
-        else:
-            yield compare(getattr(pc, c), bound)
+        yield compare(getattr(pc, c), bound)
+
 
 def are_out_of_bounds(pc, bounds):
     """ Determine whether each point in pc is out of bounds

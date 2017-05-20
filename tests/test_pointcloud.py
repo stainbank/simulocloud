@@ -80,7 +80,7 @@ def test_PointCloud_from_multiple_las(pc_multilas, pc_las):
 
 def test_PointCloud_from_tiles(fpath='data/ALS.las', fdir='ALS_tiles'):
     """Can a specific-area PointCloud be constructed from multiple .las files?"""
-    bounds = Bounds(90, 20, 10, 100, 30, 20)
+    bounds = Bounds(90, 20, None, 100, 30, None)
     cropped = PointCloud.from_las(fpath).crop(*bounds)
     tiled = PointCloud.from_tiles(bounds, *get_fpaths(fdir))
     assert (len(cropped) == len(tiled)) and (cropped.bounds == tiled.bounds)
