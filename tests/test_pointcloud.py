@@ -65,6 +65,10 @@ def get_fpaths(fdir):
     """Return a list of .las files in fdir."""
     return [abspath(fname, os.path.join('data', fdir)) for fname in os.listdir(abspath(fdir))]
 
+def same_len_and_bounds(pc1, pc2):
+    """Assess whether two PointClouds have the same length and bounds."""
+    return all((len(pc1) == len(pc2), pc1.bounds == pc2.bounds))
+
 """ Test functions """
 
 def test_PointCloud_read_from_array(pc_arr, input_array):
@@ -186,9 +190,9 @@ def test_PointCloud_can_downsample(pc_las):
 def test_pointclouds_merged_by_function(pc_las, fdir='ALS_tiles'):
     pcs = [PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
     merged = merge(PointCloud, *pcs)
-    assert (len(merged) == len(pc_las)) and (merged.bounds == pc_las.bounds)
+    assert same_len_and_bounds(merged, pc_las)
 
 def test_pointclouds_merged_by_method(pc_las, fdir='ALS_tiles'):
     pcs = [PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
     merged = pcs.pop().merge(*pcs)
-    assert (len(merged) == len(pc_las)) and (merged.bounds == pc_las.bounds)
+    assert same_len_and_bounds(merged, pc_las)
