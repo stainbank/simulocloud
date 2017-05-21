@@ -216,7 +216,7 @@ class PointCloud(object):
     
     def crop(self, minx=None, miny=None, minz=None,
                    maxx=None, maxy=None, maxz=None,
-                   return_empty=False):
+                   destructive=False, return_empty=False):
         """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
         
         Arguments
@@ -224,6 +224,8 @@ class PointCloud(object):
         minx, miny, minz, maxx, maxy, maxz: float or int (default: None)
             minimum and maximum bounds to crop pointcloud to within
             None results in no cropping at that bound
+        destructive: bool (default: False)
+            whether to remove cropped values from pointcloud
         return_empty: bool (default: False)
             whether to allow empty pointclouds to be created or raise an
             EmptyPointCloud exception        
@@ -245,7 +247,10 @@ class PointCloud(object):
                 raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
                                         bounds)
          
-        return type(self)(self.arr[:, ~oob])
+        cropped = type(self)(self.arr[:, ~oob])
+        if destructive:
+            self.__init__(self.arr[:, oob])
+        return cropped
 
     def to_txt(self, fpath):
         """Export point cloud coordinates as 3-column (xyz) ASCII file.

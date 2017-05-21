@@ -167,6 +167,22 @@ def test_cropping_to_nothing_returns_empty(pc_arr, inf_bounds):
     """Does PointCloud cropping return an empty PointCloud when asked?"""
     assert not len(pc_arr.crop(*inf_bounds, return_empty=True))
 
+def test_cropping_destructively(pc_las, none_bounds):
+    """Does destructive cropping modify the original pointcloud?"""
+    # Split bounds horizontally
+    bounds = pc_las.bounds
+    halfx = bounds.minx + (bounds.maxx - bounds.minx)/2
+    top_bounds = none_bounds._replace(minx=halfx)
+    bottom_bounds = none_bounds._replace(maxx=halfx)
+    
+    # Split pointcloud
+    top = pc_las.crop(*top_bounds)
+    bottom = pc_las.crop(*bottom_bounds)
+    cropped = pc_las.crop(*top_bounds, destructive=True)
+    
+    assert (same_len_and_bounds(cropped, top) and
+            same_len_and_bounds(pc_las, bottom))
+
 def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     """Is the file output by PointCloud.to_txt identical to the input?"""
     fpath = tmpdir.join("_INPUT_DATA.txt").strpath
