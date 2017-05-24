@@ -126,37 +126,38 @@ def test_cropping_with_none_bounds(pc_arr, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
     assert np.allclose(pc_arr.crop(*none_bounds).arr, pc_arr.arr)
 
-@pytest.mark.parametrize('dim', ('x', 'y', 'z'))
-def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, dim):
+@pytest.mark.parametrize('d', ('x', 'y', 'z'))
+def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, d):
     """Does PointCloud cropping preserve values at lower bounds?"""
     # Ensure a unique point used as minimum bound
-    sorted_points = np.sort(pc_arr.points, order=[dim])
-    for i, mindim in enumerate(sorted_points[dim]):
+    sorted_points = np.sort(pc_arr.points, order=[d])
+    for i, mind in enumerate(sorted_points[d]):
         if i < 1: continue # at least one point must be out of bounds
-        if mindim != sorted_points[i-1][dim]: 
+        if mind != sorted_points[i-1][d]: 
             lowest_point = sorted_points[i]
             break
     
     # Apply lower bound cropping to a single dimension
-    pc_cropped = pc_arr.crop(**{'min'+dim: mindim})
+    pc_cropped = pc_arr.crop(**{'min'+d: mind})
     
-    assert np.sort(pc_cropped.points, order=dim)[0] == lowest_point
+    assert np.sort(pc_cropped.points, order=d)[0] == lowest_point
 
-@pytest.mark.parametrize('c', ('x', 'y', 'z'))
-def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, c):
+@pytest.mark.parametrize('d', ('x', 'y', 'z'))
+def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, d):
     """Does PointCloud cropping omit values at upper bounds?"""
     # Ensure a unique point used as maximum bound
-    rev_sorted_points = np.sort(pc_arr.points, order=[c])[::-1]
-    for i, maxc in enumerate(rev_sorted_points[c]):
-        if maxc != rev_sorted_points[i+1][c]:
+    rev_sorted_points = np.sort(pc_arr.points, order=[d])[::-1]
+    for i, maxd in enumerate(rev_sorted_points[d]):
+        if maxd != rev_sorted_points[i+1][d]:
             oob_point = rev_sorted_points[i]
             highest_point = rev_sorted_points[i+1]
             break
     # Apply upper bound cropping to a single dimension
-    pc_arr = pc_arr.crop(**{'max'+c: maxc})
+
+    pc_cropped = pc_arr.crop(**{'max'+d: maxd})
     
-    assert (np.sort(pc_arr.points, order=c)[-1] == highest_point) and (
-           oob_point not in pc_arr.points)
+    assert (np.sort(pc_cropped.points, order=d)[-1] == highest_point) and (
+           oob_point not in pc_cropped.points)
 
 def test_cropping_to_nothing_raises_exception_when_specified(pc_arr, inf_bounds):
     """Does PointCloud cropping refuse to return an empty PointCloud?"""
