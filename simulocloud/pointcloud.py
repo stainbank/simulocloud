@@ -108,7 +108,7 @@ class PointCloud(object):
             filepaths of .las file containing 3D point coordinates
         
         """
-        bounds = Bounds(*bounds)
+        bounds = InfBounds(*bounds)
         # Determine which tiles intersect bounds
         tiles = [fpath for fpath in fpaths
                  if _intersects_3D(bounds, _get_las_bounds(fpath))] 
@@ -234,7 +234,7 @@ class PointCloud(object):
             new object containing only points within specified bounds
         
         """
-        bounds = Bounds(*bounds)
+        bounds = InfBounds(*bounds)
         oob = are_out_of_bounds(self, bounds)
         
         # Deal with empty pointclouds
@@ -303,7 +303,9 @@ class PointCloud(object):
         """
         return merge(type(self), self, *pointclouds)
 
-class Bounds(namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])):
+Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
+
+class InfBounds(Bounds):
     """`namedtuple` describing the bounds box surrounding PointCloud."""
     __slots__ = ()
     _format = '{:.3g}'
