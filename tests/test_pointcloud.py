@@ -86,7 +86,7 @@ def test_PointCloud_from_multiple_las(pc_multilas, pc_las):
 def test_PointCloud_from_tiles(fpath='data/ALS.las', fdir='ALS_tiles'):
     """Can a specific-area PointCloud be constructed from multiple .las files?"""
     bounds = Bounds(90, 20, None, 100, 30, None)
-    cropped = PointCloud.from_las(fpath).crop(*bounds)
+    cropped = PointCloud.from_las(fpath).crop(bounds)
     tiled = PointCloud.from_tiles(bounds, *get_fpaths(fdir))
     assert (len(cropped) == len(tiled)) and (cropped.bounds == tiled.bounds)
 
@@ -124,7 +124,7 @@ def test_dim_attributes_are_accurate(input_array, pc_arr, i, dim):
 
 def test_cropping_with_none_bounds(pc_arr, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
-    assert np.allclose(pc_arr.crop(*none_bounds).arr, pc_arr.arr)
+    assert np.allclose(pc_arr.crop(none_bounds).arr, pc_arr.arr)
 
 @pytest.mark.parametrize('d', ('x', 'y', 'z'))
 def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, d):
@@ -138,7 +138,8 @@ def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, d):
             break
     
     # Apply lower bound cropping to a single dimension
-    pc_cropped = pc_arr.crop(**{'min'+d: mind})
+    bounds = none_bounds._replace(**{'min'+d: mind})
+    pc_cropped = pc_arr.crop(bounds)
     
     assert np.sort(pc_cropped.points, order=d)[0] == lowest_point
 
@@ -154,7 +155,8 @@ def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, d):
             break
     # Apply upper bound cropping to a single dimension
 
-    pc_cropped = pc_arr.crop(**{'max'+d: maxd})
+    bounds = none_bounds._replace(**{'max'+d: maxd})
+    pc_cropped = pc_arr.crop(bounds)
     
     assert (np.sort(pc_cropped.points, order=d)[-1] == highest_point) and (
            oob_point not in pc_cropped.points)
@@ -162,11 +164,11 @@ def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, d):
 def test_cropping_to_nothing_raises_exception_when_specified(pc_arr, inf_bounds):
     """Does PointCloud cropping refuse to return an empty PointCloud?"""
     with pytest.raises(EmptyPointCloud):
-        pc_arr.crop(*inf_bounds, return_empty=False)
+        pc_arr.crop(inf_bounds, return_empty=False)
 
 def test_cropping_to_nothing_returns_empty(pc_arr, inf_bounds):
     """Does PointCloud cropping return an empty PointCloud when asked?"""
-    assert not len(pc_arr.crop(*inf_bounds, return_empty=True))
+    assert not len(pc_arr.crop(inf_bounds, return_empty=True))
 
 def test_cropping_destructively(pc_las, none_bounds):
     """Does destructive cropping modify the original pointcloud?"""
@@ -177,9 +179,9 @@ def test_cropping_destructively(pc_las, none_bounds):
     bottom_bounds = none_bounds._replace(maxx=halfx)
     
     # Split pointcloud
-    top = pc_las.crop(*top_bounds)
-    bottom = pc_las.crop(*bottom_bounds)
-    cropped = pc_las.crop(*top_bounds, destructive=True)
+    top = pc_las.crop(top_bounds)
+    bottom = pc_las.crop(bottom_bounds)
+    cropped = pc_las.crop(top_bounds, destructive=True)
     
     assert (same_len_and_bounds(cropped, top) and
             same_len_and_bounds(pc_las, bottom))

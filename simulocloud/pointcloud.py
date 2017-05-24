@@ -112,7 +112,7 @@ class PointCloud(object):
         # Determine which tiles intersect bounds
         tiles = [fpath for fpath in fpaths
                  if _intersects_3D(bounds, _get_las_bounds(fpath))] 
-        return cls.from_las(*tiles).crop(*bounds) 
+        return cls.from_las(*tiles).crop(bounds) 
 
     @classmethod
     def from_laspy_File(cls, f):
@@ -214,15 +214,13 @@ class PointCloud(object):
 
         return Header(**header)
     
-    def crop(self, minx=None, miny=None, minz=None,
-                   maxx=None, maxy=None, maxz=None,
-                   destructive=False, return_empty=False):
+    def crop(self, bounds, destructive=False, return_empty=False):
         """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
         
         Arguments
         ---------
-        minx, miny, minz, maxx, maxy, maxz: float or int (default: None)
-            minimum and maximum bounds to crop pointcloud to within
+        bounds: `Bounds` namedtuple
+            (minx, miny, minz, maxx, maxy, maxz) to test point coordinates against
             None results in no cropping at that bound
         destructive: bool (default: False)
             whether to remove cropped values from pointcloud
@@ -236,7 +234,7 @@ class PointCloud(object):
             new object containing only points within specified bounds
         
         """
-        bounds = Bounds(minx, miny, minz, maxx, maxy, maxz)
+        bounds = Bounds(*bounds)
         oob = are_out_of_bounds(self, bounds)
         
         # Deal with empty pointclouds
