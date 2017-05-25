@@ -108,10 +108,9 @@ class PointCloud(object):
             filepaths of .las file containing 3D point coordinates
         
         """
-        bounds = InfBounds(*bounds)
         # Determine which tiles intersect bounds
         tiles = [fpath for fpath in fpaths
-                 if _intersects_3D(bounds, _get_las_bounds(fpath))] 
+                 if _intersects_3D(InfBounds(*bounds), _get_las_bounds(fpath))] 
         return cls.from_las(*tiles).crop(bounds) 
 
     @classmethod
@@ -234,9 +233,8 @@ class PointCloud(object):
             new object containing only points within specified bounds
         
         """
-        bounds = InfBounds(*bounds)
+        bounds = Bounds(*bounds)
         oob = are_out_of_bounds(self, bounds)
-        
         # Deal with empty pointclouds
         if oob.all():
             if return_empty:
@@ -392,25 +390,23 @@ def _iter_out_of_bounds(pc, bounds):
     Returns
     -------
     generator (len 6)
-        each iteration yields a boolean numpy.ndarray describing whether,
-        seperately, each dimension of (x,y,z) point coordinates are outside
-        each of the respective lower and upper bound values
-        sequence order is identical to bounds
+        yields, for each bound of lower, upper of x, y, z, not equal to `None`,
+        a boolean numpy.ndarray describing whether each point falls outside of
+        that bound in that dimension
     
     Notes
     -----
     Comparisons are python-like, i.e.:
         x < minx
         x >= maxx
-        All coordinate values compare False to `None`.
+    Comparisons to `None` are skipped (generator will be empty if all bounds
+    are `None`)
     """
-    # Set up comparison elements in same order as bounds
-    comparison_funcs = (np.less,)*3 + (np.greater_equal,)*3
-    coords = ('x', 'y', 'z')*2
-    
-    for compare, c, bound in zip(comparison_funcs, coords, bounds):
-        yield compare(getattr(pc, c), bound)
-
+    for i, dim in enumerate(pc.arr):
+        for compare, bound in zip((np.less, np.greater_equal),
+                                  (bounds[i], bounds[i+3])):
+            if bound is not None:
+                yield compare(dim, bound)
 
 def are_out_of_bounds(pc, bounds):
     """ Determine whether each point in pc is out of bounds
@@ -428,7 +424,7 @@ def are_out_of_bounds(pc, bounds):
         in `pc` are outside of the specified `bounds`
     
     """
-    oob = np.zeros(len(pc))
+    oob = np.zeros(len(pc), dtype=bool)
     for comparison in _iter_out_of_bounds(pc, bounds):
         oob = np.logical_or(comparison, oob)
     return oob
