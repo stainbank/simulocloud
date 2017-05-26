@@ -301,6 +301,42 @@ class PointCloud(object):
         """
         return merge(type(self), self, *pointclouds)
 
+    def split(self, axis, splitlocs, pctype=None, return_empty=True):
+        """Split this pointcloud at specified locations along axis.
+        
+        Arguments
+        ---------
+        axis: str
+            point coordinate component ('x', 'y', or 'z') to split along
+        splitlocs: iterable of float
+            points along `axis` at which to split pointcloud
+        pctype: subclass of `PointCloud`
+           type of pointclouds to return
+        return_empty: bool (default: True)
+            whether to allow empty pointclouds to be created or raise an
+            EmptyPointCloud exception
+
+        Returns
+        -------
+        pcs: list of `pctype` (PointCloud) instances
+            pointclouds with `axis` bounds defined sequentially (low -> high)
+            by self.bounds and splitlocs
+        """
+        # Copy pointcloud
+        if pctype is None:
+            pctype = type(self)
+        pc = pctype(self.arr)
+        
+        # Sequentially (high -> low) split pointcloud
+        none_bounds = Bounds(*(None,)*6)
+        pcs = [pc.crop(none_bounds._replace(**{'min'+axis: loc}),
+                       destructive=True, return_empty=return_empty)
+                  for loc in sorted(splitlocs)[::-1]]
+        pcs.append(pc)
+        
+        return pcs[::-1]
+
+
 Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
 
 class InfBounds(Bounds):
