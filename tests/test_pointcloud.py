@@ -6,6 +6,7 @@ import pytest
 import numpy as np
 import cPickle as pkl
 import os
+from math import ceil
 
 """ Constants and fixtures """
 # Data type used for arrays
@@ -68,6 +69,10 @@ def get_fpaths(fdir):
 def same_len_and_bounds(pc1, pc2):
     """Assess whether two PointClouds have the same length and bounds."""
     return all((len(pc1) == len(pc2), pc1.bounds == pc2.bounds))
+
+def get_dimension_bounds(pc, d):
+    """Return the (min, max) of dimension `d` in bounds of `pc`."""
+    return tuple([getattr(pc.bounds, b + d) for b in ('min', 'max')])
 
 """ Test functions """
 
@@ -215,3 +220,22 @@ def test_pointclouds_merged_by_method(pc_las, fdir='ALS_tiles'):
     pcs = [PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
     merged = pcs.pop().merge(*pcs)
     assert same_len_and_bounds(merged, pc_las)
+
+@pytest.mark.parametrize('axis', ('x', 'y', 'z'))
+def test_pointcloud_split_along_splitlocs(pc_las, axis):
+    """Is a pointcloud split to be between split locations?
+
+    Assumes points distributed densely throughout range so that that there is
+    at least one point between each (1m) interval --- otherwise error
+    """
+    # Split pointcloud at integer intervals
+    mind, maxd = get_dimension_bounds(pc_las, axis)
+    splitlocs = range(*(int(ceil(dbound)) for dbound in (mind, maxd)))
+    pcs = pc_las.split(axis, splitlocs)
+    
+    # Check points fall between split locations
+    splitbounds = zip([mind] + splitlocs, #upper
+                      splitlocs + [maxd]) #lower
+    for pc, (mind_split, maxd_split) in zip(pcs, splitbounds):
+        mind, maxd = get_dimension_bounds(pc, axis)
+        assert mind >= mind_split and maxd <= maxd_split
