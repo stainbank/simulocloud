@@ -17,7 +17,7 @@ class VisualiseException(SimulocloudException):
     pass
 
 class EmptyPointCloud(PointcloudException, ValueError):
-    """An empty PointCloud would be created against user wishes."""
+    """An empty PointCloud is being created or summarised."""
     pass
 
 class DimsError(VisualiseException):

@@ -183,11 +183,17 @@ class PointCloud(object):
         -------
         namedtuple (minx, miny, minz, maxx, maxy, maxz)
         
+        Raises
+        ------
+        EmptyPointCloud
+            if there are no points
         """
         x,y,z = self.arr
-        return Bounds(x.min(), y.min(), z.min(),
-                      x.max(), y.max(), z.max())
-
+        try:
+            return Bounds(x.min(), y.min(), z.min(),
+                          x.max(), y.max(), z.max())
+        except ValueError:
+            raise EmptyPointCloud, "len 0 PointCloud has no Bounds"
 
     @property
     def header(self):

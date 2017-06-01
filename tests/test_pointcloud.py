@@ -126,6 +126,12 @@ def test_InfBounds_coerces_Nones(capfd, none_bounds):
     assert out == ("Bounds: minx=-inf, miny=-inf, minz=-inf\n        "
                            "maxx=inf, maxy=inf, maxz=inf\n")
 
+def test_empty_pointcloud_has_no_bounds():
+    """Is an exception raised when attempting to check bounds of empty PointCloud?"""
+    pc = PointCloud([[],[],[]])
+    with pytest.raises(EmptyPointCloud):
+        pc.bounds
+
 def test_len_works(pc_arr):
     """Does __len__() report the correct number of points?"""
     # Assumes lists in _INPUT_DATA are consistent length
