@@ -1,4 +1,4 @@
-from simulocloud import PointCloud, Bounds
+from simulocloud.pointcloud import PointCloud, Bounds, InfBounds
 from simulocloud.exceptions import EmptyPointCloud
 from simulocloud.pointcloud import merge
 from laspy.file import File
@@ -106,6 +106,26 @@ def test_arr_generation(pc_arr, input_array):
 def test_bounds_returns_accurate_boundary_box(pc_arr):
     """Does PointCloud.bounds accurately describe the bounding box?"""
     assert pc_arr.bounds == tuple((f(c) for f in (min, max) for c in _INPUT_DATA)) 
+
+def test_none_bounds_can_print(capfd, none_bounds):
+    """Does the NoneFormatter coerce `Bound`s with `None` values to print?"""
+    print none_bounds
+    out, err = capfd.readouterr()
+    assert out == ("Bounds: minx=None, miny=None, minz=None\n        "
+                           "maxx=None, maxy=None, maxz=None\n")
+
+def test_bad_value_bounds_fail_to_print(capfd, pc_arr):
+    """Do `Bound`s fail to print if any value is not a numeric or `None`?"""
+    with pytest.raises(ValueError):
+        print Bounds(*(pc_arr,)*6)
+
+def test_InfBounds_coerces_Nones(capfd, none_bounds):
+    """Does `InfBounds` coerce `None`s to negative (mins) and positive (maxs)`inf`s?"""
+    print InfBounds(*none_bounds)
+    out, err = capfd.readouterr()
+    assert out == ("Bounds: minx=-inf, miny=-inf, minz=-inf\n        "
+                           "maxx=inf, maxy=inf, maxz=inf\n")
+
 def test_len_works(pc_arr):
     """Does __len__() report the correct number of points?"""
     # Assumes lists in _INPUT_DATA are consistent length
