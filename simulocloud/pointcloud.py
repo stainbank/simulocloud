@@ -5,6 +5,7 @@ Read in and store point clouds.
 """
 
 import numpy as np
+import string
 from laspy.file import File
 from laspy.header import Header, VLR
 from collections import namedtuple
@@ -337,12 +338,50 @@ class PointCloud(object):
         return pcs[::-1]
 
 
-Bounds = namedtuple('Bounds', ['minx', 'miny', 'minz', 'maxx', 'maxy', 'maxz'])
+class NoneFormatter(string.Formatter):
+    """Handle an attempt to apply decimal formatting to `None`.
 
-class InfBounds(Bounds):
+    `__init__` and `get_value` are from https://stackoverflow.com/a/21664626
+    and allow autonumbering.
+    """
+
+    def __init__(self):
+        super(NoneFormatter, self).__init__()
+        self.last_number = 0
+
+    def get_value(self, key, args, kwargs):
+        if key == '':
+            key = self.last_number
+            self.last_number += 1
+        return super(NoneFormatter, self).get_value(key, args, kwargs)
+
+    def format_field(self, value, format_spec):
+        """Format any `None` value sans specification (i.e. default format)."""
+        if value is None:
+            return format(value)
+        else:
+            return super(NoneFormatter, self).format_field(value, format_spec)
+            if value is None:
+                return format(value)
+            else: raise e
+
+
+class Bounds(namedtuple('Bounds', ['minx', 'miny', 'minz',
+                                   'maxx', 'maxy', 'maxz'])):
     """`namedtuple` describing the bounds box surrounding PointCloud."""
     __slots__ = ()
     _format = '{:.3g}'
+
+    def __str__(self):
+        """Truncate printed values as specified by class attribute `_format`."""
+        template = ('Bounds: minx={f}, miny={f}, minz={f}\n        '
+                    'maxx={f}, maxy={f}, maxz={f}'.format(f=self._format))
+        # Formatter must be recreated each time to reset value counter
+        return NoneFormatter().format(template, *self)
+
+class InfBounds(Bounds):
+    """`Bounds` namedtuple, with `None`s coerced to `inf`s."""
+    __slots__ = ()
 
     def __new__(cls, minx, miny, minz, maxx, maxy, maxz):
         """Create new instance of Bounds(minx, miny, minz, maxx, maxy, maxz)
@@ -365,11 +404,6 @@ class InfBounds(Bounds):
         
         kwargs.pop('cls') # must be passed positionally
         return super(cls, cls).__new__(cls, **kwargs)
-
-    def __str__(self):
-        template = ('Bounds: minx={f}, miny={f}, minz={f} \n        '
-                    'maxx={f}, maxy={f}, maxz={f}'.format(f=self._format))
-        return template.format(*self)
 
 
 def _combine_las(*fpaths):
