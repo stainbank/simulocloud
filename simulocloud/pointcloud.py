@@ -214,7 +214,7 @@ class PointCloud(object):
 
         return Header(**header)
     
-    def crop(self, bounds, destructive=False, return_empty=False):
+    def crop(self, bounds, destructive=False, allow_empty=False):
         """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
         
         Arguments
@@ -224,7 +224,7 @@ class PointCloud(object):
             None results in no cropping at that bound
         destructive: bool (default: False)
             whether to remove cropped values from pointcloud
-        return_empty: bool (default: False)
+        allow_empty: bool (default: False)
             whether to allow empty pointclouds to be created or raise an
             EmptyPointCloud exception        
         
@@ -238,7 +238,7 @@ class PointCloud(object):
         oob = are_out_of_bounds(self, bounds)
         # Deal with empty pointclouds
         if oob.all():
-            if return_empty:
+            if allow_empty:
                 return type(self)(None)
             else:
                 raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
@@ -302,7 +302,7 @@ class PointCloud(object):
         """
         return merge(type(self), self, *pointclouds)
 
-    def split(self, axis, splitlocs, pctype=None, return_empty=True):
+    def split(self, axis, splitlocs, pctype=None, allow_empty=True):
         """Split this pointcloud at specified locations along axis.
         
         Arguments
@@ -313,7 +313,7 @@ class PointCloud(object):
             points along `axis` at which to split pointcloud
         pctype: subclass of `PointCloud`
            type of pointclouds to return
-        return_empty: bool (default: True)
+        allow_empty: bool (default: True)
             whether to allow empty pointclouds to be created or raise an
             EmptyPointCloud exception
 
@@ -331,7 +331,7 @@ class PointCloud(object):
         # Sequentially (high -> low) split pointcloud
         none_bounds = Bounds(*(None,)*6)
         pcs = [pc.crop(none_bounds._replace(**{'min'+axis: loc}),
-                       destructive=True, return_empty=return_empty)
+                       destructive=True, allow_empty=allow_empty)
                   for loc in sorted(splitlocs)[::-1]]
         pcs.append(pc)
         

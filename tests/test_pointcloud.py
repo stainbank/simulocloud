@@ -189,11 +189,11 @@ def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, d):
 def test_cropping_to_nothing_raises_exception_when_specified(pc_arr, inf_bounds):
     """Does PointCloud cropping refuse to return an empty PointCloud?"""
     with pytest.raises(EmptyPointCloud):
-        pc_arr.crop(inf_bounds, return_empty=False)
+        pc_arr.crop(inf_bounds, allow_empty=False)
 
 def test_cropping_to_nothing_returns_empty(pc_arr, inf_bounds):
     """Does PointCloud cropping return an empty PointCloud when asked?"""
-    assert not len(pc_arr.crop(inf_bounds, return_empty=True))
+    assert not len(pc_arr.crop(inf_bounds, allow_empty=True))
 
 def test_cropping_destructively(pc_las, none_bounds):
     """Does destructive cropping modify the original pointcloud?"""
