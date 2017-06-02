@@ -505,12 +505,12 @@ def are_out_of_bounds(pc, bounds):
         oob = np.logical_or(comparison, oob)
     return oob
 
-def merge(cls, *pointclouds):
-    """Return an instance of `cls` containing merged `pointclouds`.
+def merge(pctype, *pointclouds):
+    """Return an instance of `pctype` containing merged `pointclouds`.
     
     Arguments
     ---------
-    cls: `PointCloud` class (or subclass)
+    pctype: `PointCloud` class (or subclass)
     *pointclouds: instances of `PointCloud` (or subclass)
     """
     sizes = [len(pc) for pc in pointclouds]
@@ -522,4 +522,4 @@ def merge(cls, *pointclouds):
         j = i + size
         arr[:,i:j] = pc.arr
         i = j
-    return cls(arr)
+    return pctype(arr)
