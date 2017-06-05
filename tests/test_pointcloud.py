@@ -71,8 +71,13 @@ def same_len_and_bounds(pc1, pc2):
     return all((len(pc1) == len(pc2), pc1.bounds == pc2.bounds))
 
 def get_dimension_bounds(pc, d):
-    """Return the (min, max) of dimension `d` in bounds of `pc`."""
-    return tuple([getattr(pc.bounds, b + d) for b in ('min', 'max')])
+    """Return the (min, max) of dimension `d` in bounds of PointCloud (or Bounds namedtuple) `pc`."""
+    try:
+        bounds = pc.bounds
+    except AttributeError:
+        bounds = pc
+    
+    return tuple([getattr(bounds, b + d) for b in ('min', 'max')])
 
 """ Test functions """
 
