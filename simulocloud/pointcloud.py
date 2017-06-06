@@ -505,6 +505,39 @@ def are_out_of_bounds(pc, bounds):
         oob = np.logical_or(comparison, oob)
     return oob
 
+def _get_dimension_bounds(pc, d):
+    """Return the (min, max) of dimension `d` in bounds of PointCloud (or Bounds namedtuple) `pc`."""
+    try:
+        bounds = pc.bounds
+    except AttributeError:
+        bounds = pc
+    
+    return tuple([getattr(bounds, b + d) for b in ('min', 'max')])
+
+def merge_bounds(bounds):
+    """Find overall bounds of pcs (or bounds).
+    
+    Arguments
+    ---------
+    pcs: iterable of `Bounds` namedtuple (or similiar)
+         None values will be treated as appropriate inf
+    
+    Returns
+    -------
+    `Bounds` namedtuple
+        describing total area covered by args
+    
+    """
+    # Coerce Nones to Infs
+    all_bounds = [InfBounds(*bounds) for bounds in bounds]
+    
+    # Extract mins/maxs of dimensions
+    all_bounds = np.array(all_bounds)
+    return Bounds(all_bounds[:,0].min(), all_bounds[:,1].min(), all_bounds[:,2].min(),
+                  all_bounds[:,3].max(), all_bounds[:,4].max(), all_bounds[:,5].max())
+
+"""PointCloud manipulation"""
+
 def merge(pctype, *pointclouds):
     """Return an instance of `pctype` containing merged `pointclouds`.
     
@@ -523,3 +556,81 @@ def merge(pctype, *pointclouds):
         arr[:,i:j] = pc.arr
         i = j
     return pctype(arr)
+
+def retile(pcs, splitlocs_xyz, pctype=PointCloud):
+    """Merge pointclouds then split in x, y and z dimensions.
+    
+    Arguments
+    ---------
+    pcs: seq of `PointCloud`
+    splitlocs_xyz: dict
+        {d: dlocs, ...}, where:
+            d: str
+                'x', 'y' and/or 'z' dimension
+            dlocs: list
+                locations along specified axis at which to split
+                (see docs for `PointCloud.split`)
+        dimensions can be omitted, resulting in no splitting in that dimension
+    pctype: subclass of `PointCloud` (default=`PointCloud`)
+       type of pointclouds to return
+    
+    Returns
+    -------
+    pcs_3d: `numpy.ndarray` (ndim=3, dtype=object)
+        3D array containing pointclouds (of type `pctype`) resulting from the
+        (collective) splitting of `pcs` in each dimension according to `dlocs`
+        in `splitlocs`
+        sorted `dlocs` align with sequential pointclouds along each array axis:
+            0:x, 1:y, 2:z
+    
+    """
+    shape = [] #nx, ny, nz
+    for d in 'x', 'y', 'z':
+        dlocs = sorted(splitlocs_xyz.setdefault(d, []))
+        shape.append(len(dlocs) + 1) #i.e. n pointclouds created by split
+        #! Should assert splitlocs within bounds of pcs
+        splitlocs_xyz[d] = dlocs
+    
+    # Build 4D array with pcs split in x, y and z
+    pcs_4d = np.empty([len(pcs)] + shape, dtype=object)
+    for i, pc in enumerate(pcs):
+        pcs = pc.split('x', splitlocs_xyz['x'], pctype=pctype)
+        for ix, pc in enumerate(pcs):
+            pcs = pc.split('y', splitlocs_xyz['y'])
+            for iy, pc in enumerate(pcs):
+                pcs = pc.split('z', splitlocs_xyz['z'])
+                # Assign pc to predetermined location
+                for iz, pc in enumerate(pcs):
+                    pcs_4d[i, ix, iy, iz] = pc
+    
+    # Flatten to 3D
+    return np.sum(pcs_4d, axis=0)
+
+def fractional_splitlocs(bounds, nx=None, ny=None, nz=None):
+    """Generate locations to split bounds into n even sections per axis.
+    
+    Arguments
+    ---------
+    bounds: `Bounds` namedtuple (or similiar)
+        bounds within which to create tiles
+    nx, ny, nz : int (default=None)
+        number of pointclouds desired along each axis
+        no splitting if n < 2 (or None)
+    
+    Returns
+    -------
+    splitlocs: dict ({d: dlocs, ...)}
+        lists of locations for each dimension d (i.e. 'x', 'y', 'z')
+        len(dlocs) = nd-1; omitted if nd=None
+     
+    """
+    bounds = Bounds(*bounds) #should be a strict bounds (min<max, etc)
+    nsplits = {d: n for d, n in zip('xyz', (nx, ny, nz)) if n is not None}
+    # Build splitlocs
+    splitlocs = {}
+    for d, nd in nsplits.iteritems():
+        mind, maxd = _get_dimension_bounds(bounds, d)
+        splitlocs[d] = np.linspace(mind, maxd, num=nd,
+                                   endpoint=False)[1:] # "inside" edges only
+    
+    return splitlocs
