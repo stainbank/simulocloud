@@ -558,7 +558,7 @@ def merge(pctype, *pointclouds):
     return pctype(arr)
 
 def retile(pcs, splitlocs_xyz, pctype=PointCloud):
-    """Merge pointclouds then split in x, y and z dimensions.
+    """Return a 3D grid of (merged) pointclouds split in x, y and z dimensions.
     
     Arguments
     ---------
@@ -576,7 +576,7 @@ def retile(pcs, splitlocs_xyz, pctype=PointCloud):
     
     Returns
     -------
-    pcs_3d: `numpy.ndarray` (ndim=3, dtype=object)
+    tile_grid: `numpy.ndarray` (ndim=3, dtype=object)
         3D array containing pointclouds (of type `pctype`) resulting from the
         (collective) splitting of `pcs` in each dimension according to `dlocs`
         in `splitlocs`
@@ -592,7 +592,7 @@ def retile(pcs, splitlocs_xyz, pctype=PointCloud):
         splitlocs_xyz[d] = dlocs
     
     # Build 4D array with pcs split in x, y and z
-    pcs_4d = np.empty([len(pcs)] + shape, dtype=object)
+    tile_grid = np.empty([len(pcs)] + shape, dtype=object)
     for i, pc in enumerate(pcs):
         pcs = pc.split('x', splitlocs_xyz['x'], pctype=pctype)
         for ix, pc in enumerate(pcs):
@@ -601,10 +601,10 @@ def retile(pcs, splitlocs_xyz, pctype=PointCloud):
                 pcs = pc.split('z', splitlocs_xyz['z'])
                 # Assign pc to predetermined location
                 for iz, pc in enumerate(pcs):
-                    pcs_4d[i, ix, iy, iz] = pc
+                    tile_grid[i, ix, iy, iz] = pc
     
     # Flatten to 3D
-    return np.sum(pcs_4d, axis=0)
+    return np.sum(tile_grid, axis=0)
 
 def fractional_splitlocs(bounds, nx=None, ny=None, nz=None):
     """Generate locations to split bounds into n even sections per axis.
