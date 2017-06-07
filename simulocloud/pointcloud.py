@@ -308,14 +308,14 @@ class PointCloud(object):
         """
         return merge(type(self), self, *pointclouds)
 
-    def split(self, axis, splitlocs, pctype=None, allow_empty=True):
+    def split(self, axis, dlocs, pctype=None, allow_empty=True):
         """Split this pointcloud at specified locations along axis.
         
         Arguments
         ---------
         axis: str
             point coordinate component ('x', 'y', or 'z') to split along
-        splitlocs: iterable of float
+        dlocs: iterable of float
             points along `axis` at which to split pointcloud
         pctype: subclass of `PointCloud`
            type of pointclouds to return
@@ -327,7 +327,7 @@ class PointCloud(object):
         -------
         pcs: list of `pctype` (PointCloud) instances
             pointclouds with `axis` bounds defined sequentially (low -> high)
-            by self.bounds and splitlocs
+            by self.bounds and dlocs
         """
         # Copy pointcloud
         if pctype is None:
@@ -338,7 +338,7 @@ class PointCloud(object):
         none_bounds = Bounds(*(None,)*6)
         pcs = [pc.crop(none_bounds._replace(**{'min'+axis: loc}),
                        destructive=True, allow_empty=allow_empty)
-                  for loc in sorted(splitlocs)[::-1]]
+                  for loc in sorted(dlocs)[::-1]]
         pcs.append(pc)
         
         return pcs[::-1]
@@ -557,13 +557,13 @@ def merge(pctype, *pointclouds):
         i = j
     return pctype(arr)
 
-def retile(pcs, splitlocs_xyz, pctype=PointCloud):
+def retile(pcs, splitlocs, pctype=PointCloud):
     """Return a 3D grid of (merged) pointclouds split in x, y and z dimensions.
     
     Arguments
     ---------
     pcs: seq of `PointCloud`
-    splitlocs_xyz: dict
+    splitlocs: dict
         {d: dlocs, ...}, where:
             d: str
                 'x', 'y' and/or 'z' dimension
@@ -586,19 +586,19 @@ def retile(pcs, splitlocs_xyz, pctype=PointCloud):
     """
     shape = [] #nx, ny, nz
     for d in 'x', 'y', 'z':
-        dlocs = sorted(splitlocs_xyz.setdefault(d, []))
+        dlocs = sorted(splitlocs.setdefault(d, []))
         shape.append(len(dlocs) + 1) #i.e. n pointclouds created by split
         #! Should assert splitlocs within bounds of pcs
-        splitlocs_xyz[d] = dlocs
+        splitlocs[d] = dlocs
     
     # Build 4D array with pcs split in x, y and z
     tile_grid = np.empty([len(pcs)] + shape, dtype=object)
     for i, pc in enumerate(pcs):
-        pcs = pc.split('x', splitlocs_xyz['x'], pctype=pctype)
+        pcs = pc.split('x', splitlocs['x'], pctype=pctype)
         for ix, pc in enumerate(pcs):
-            pcs = pc.split('y', splitlocs_xyz['y'])
+            pcs = pc.split('y', splitlocs['y'])
             for iy, pc in enumerate(pcs):
-                pcs = pc.split('z', splitlocs_xyz['z'])
+                pcs = pc.split('z', splitlocs['z'])
                 # Assign pc to predetermined location
                 for iz, pc in enumerate(pcs):
                     tile_grid[i, ix, iy, iz] = pc

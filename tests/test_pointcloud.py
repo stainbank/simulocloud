@@ -287,7 +287,7 @@ def test_pointclouds_merged_by_method(pc_las, fdir='ALS_tiles'):
     assert same_len_and_bounds(merged, pc_las)
 
 @pytest.mark.parametrize('axis', ('x', 'y', 'z'))
-def test_pointcloud_split_along_splitlocs(pc_las, axis):
+def test_pointcloud_split_along_dlocs(pc_las, axis):
     """Is a pointcloud split to be between split locations?
 
     Assumes points distributed densely throughout range so that that there is
@@ -295,12 +295,12 @@ def test_pointcloud_split_along_splitlocs(pc_las, axis):
     """
     # Split pointcloud at integer intervals
     mind, maxd = _get_dimension_bounds(pc_las, axis)
-    splitlocs = range(*(int(ceil(dbound)) for dbound in (mind, maxd)))
-    pcs = pc_las.split(axis, splitlocs)
+    dlocs = range(*(int(ceil(dbound)) for dbound in (mind, maxd)))
+    pcs = pc_las.split(axis, dlocs)
     
     # Check points fall between split locations
-    splitbounds = zip([mind] + splitlocs, #upper
-                      splitlocs + [maxd]) #lower
+    splitbounds = zip([mind] + dlocs, #upper
+                      dlocs + [maxd]) #lower
     for pc, (mind_split, maxd_split) in zip(pcs, splitbounds):
         mind, maxd = _get_dimension_bounds(pc, axis)
         assert mind >= mind_split and maxd <= maxd_split
@@ -340,14 +340,14 @@ def _tile_grid_array_adheres_to_splitlocs(tile_grid, splitlocs):
     for axis, d in enumerate('xyz'):
         for pcs_2d in np.swapaxes(tile_grid, 2, axis): #iterate through axis last
             for pcs in pcs_2d:
-                for i, loc in enumerate(splitlocs[d]):
+                for i, dloc in enumerate(splitlocs[d]):
                     # Check split location divides adjacent pointclouds
                     for pc, b, compare in zip(pcs[i:i+2],
                                              ('max', 'min'),
                                              (np.less, np.greater_equal)):
                         try:
                             bound = getattr(pc.bounds, b+d)
-                            assert compare(bound, loc)
+                            assert compare(bound, dloc)
                         except EmptyPointCloud:
                             print 'pass'
                         # else:
