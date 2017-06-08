@@ -1,11 +1,13 @@
 from simulocloud.pointcloud import (PointCloud, Bounds, InfBounds,
                                     merge, retile, fractional_splitlocs,
-                                    merge_bounds, _get_dimension_bounds)
+                                    merge_bounds, _get_dimension_bounds,
+                                    make_edges_grid)
 from simulocloud.exceptions import EmptyPointCloud
 from laspy.file import File
 import pytest
 import numpy as np
 import cPickle as pkl
+import itertools
 import os
 from math import ceil
 
@@ -57,6 +59,17 @@ def inf_bounds():
     """A Bounds namedtuple with all bounds set to inf/-inf."""
     return Bounds(*(np.inf,)*3 + (np.inf,)*3)
 
+@pytest.fixture
+def grids(pc_las):
+    """Create overlapping pointclouds, retile, and create associated edges."""
+    pcs = overlap_pcs([pc_las], nx=4, ny=3, overlap=0.5)
+    bounds = merge_bounds((pc_las.bounds for pc in pcs))
+    splitlocs = fractional_splitlocs(bounds, nx=6, ny=5, nz=None)
+    tile_grid = retile(pcs, splitlocs)
+    edges_grid = make_edges_grid(bounds, splitlocs)
+
+    return pcs, tile_grid, edges_grid
+    
 """ Helper functions """
 
 def abspath(fname, fdir='data'):
@@ -352,3 +365,25 @@ def _tile_grid_array_adheres_to_splitlocs(tile_grid, splitlocs):
                             print 'pass'
                         # else:
                         #    print '{}: {:5g} {:.5g}'.format(b, loc, bound)
+
+
+def test_edges_grid_has_correct_shape(grids):
+    """Does the edges array have one extra element per axis than the tile array?"""
+    _, tile_grid, edges_grid = grids
+    assert edges_grid.shape[3] == 3 # x,y,z
+    for n_tile, n_bounds in zip(tile_grid.shape, edges_grid.shape[:3]):
+        assert n_bounds == n_tile+1
+
+def test_bounds_grid_describes_bounds_of_tile_grid(grids):
+    """Does the grid returned by `make_edges_grid` describe that of `retile`?"""
+    _, tile_grid, edges_grid = grids
+    for ix, iy, iz in itertools.product(*map(xrange, tile_grid.shape)):
+        # Ensure pointcloud bounds fall within edges
+        bounds = tile_grid[ix, iy, iz].bounds
+        for compare, edges, bounds in zip(
+                (np.less_equal, np.greater_equal), # both edges inclusive due to outermost edges
+                (edges_grid[ix, iy, iz], edges_grid[ix+1, iy+1, iz+1]), # adjacent pointclouds
+                (bounds[:3], bounds[3:])): # mins, maxs
+            for edge, bound in zip(edges, bounds):
+                print compare, edge, bound
+                assert compare(edge, bound)
