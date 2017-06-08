@@ -375,10 +375,10 @@ class NoneFormatter(string.Formatter):
 
 class Bounds(collections.namedtuple('Bounds', ['minx', 'miny', 'minz',
                                    'maxx', 'maxy', 'maxz'])):
-    """`collections.namedtuple` describing the bounds box surrounding PointCloud."""
+    """(minx, miny, minz, maxx, maxy, maxz) box bounding a pointcloud."""
     __slots__ = ()
     _format = '{:.3g}'
-
+    
     def __str__(self):
         """Truncate printed values as specified by class attribute `_format`."""
         template = ('Bounds: minx={f}, miny={f}, minz={f}\n        '
