@@ -6,10 +6,10 @@ Read in and store point clouds.
 
 import numpy as np
 import string
-from laspy.file import File
-from laspy.header import Header, VLR
-from collections import namedtuple
-from .exceptions import EmptyPointCloud
+import laspy.file
+import laspy.header
+import collections
+import simulocloud.exceptions
 
 _HEADER_DEFAULT = {'data_format_id': 3,
                    'x_scale': 2.5e-4,
@@ -103,7 +103,7 @@ class PointCloud(object):
 
         Arguments
         ---------
-        bounds: tuple or `Bounds` namedtuple
+        bounds: tuple or `Bounds`
             (minx, miny, minz, maxx, maxy, maxz) bounds of tile
         fpaths: str
             filepaths of .las file containing 3D point coordinates
@@ -181,11 +181,11 @@ class PointCloud(object):
         
         Returns
         -------
-        namedtuple (minx, miny, minz, maxx, maxy, maxz)
+        collections.namedtuple (minx, miny, minz, maxx, maxy, maxz)
         
         Raises
         ------
-        EmptyPointCloud
+        `simulocloud.exceptions.EmptyPointCloud`
             if there are no points
         """
         x,y,z = self.arr
@@ -193,7 +193,8 @@ class PointCloud(object):
             return Bounds(x.min(), y.min(), z.min(),
                           x.max(), y.max(), z.max())
         except ValueError:
-            raise EmptyPointCloud, "len 0 PointCloud has no Bounds"
+            raise simulocloud.exceptions.EmptyPointCloud(
+                      "len 0 PointCloud has no Bounds")
 
     @property
     def header(self):
@@ -218,21 +219,21 @@ class PointCloud(object):
                        'y_max': bounds.maxy,
                        'z_max': bounds.maxz})
 
-        return Header(**header)
+        return laspy.header.Header(**header)
     
     def crop(self, bounds, destructive=False, allow_empty=False):
         """Crop point cloud to (lower-inclusive, upper-exclusive) bounds.
         
         Arguments
         ---------
-        bounds: `Bounds` namedtuple
+        bounds: `Bounds`
             (minx, miny, minz, maxx, maxy, maxz) to test point coordinates against
             None results in no cropping at that bound
         destructive: bool (default: False)
             whether to remove cropped values from pointcloud
         allow_empty: bool (default: False)
-            whether to allow empty pointclouds to be created or raise an
-            EmptyPointCloud exception        
+            whether to allow empty pointclouds to be created or raise
+            `simulocloud.exceptions.EmptyPointCloud`
         
         Returns
         -------
@@ -247,8 +248,8 @@ class PointCloud(object):
             if allow_empty:
                 return type(self)(None)
             else:
-                raise EmptyPointCloud, "No points in crop bounds:\n{}".format(
-                                        bounds)
+                raise simulocloud.exceptions.EmptyPointCloud(
+                          "No points in crop bounds:\n{}".format(bounds))
          
         cropped = type(self)(self.arr[:, ~oob])
         if destructive:
@@ -275,8 +276,8 @@ class PointCloud(object):
             path to file to write
         
         """
-        with File(fpath, mode='w', header=self.header,
-                  vlrs=[VLR(**_VLR_DEFAULT)]) as f:
+        with laspy.file.File(fpath, mode='w', header=self.header,
+                             vlrs=[laspy.header.VLR(**_VLR_DEFAULT)]) as f:
             f.x, f.y, f.z = self.arr
 
     def downsample(self, n):
@@ -320,8 +321,8 @@ class PointCloud(object):
         pctype: subclass of `PointCloud`
            type of pointclouds to return
         allow_empty: bool (default: True)
-            whether to allow empty pointclouds to be created or raise an
-            EmptyPointCloud exception
+            whether to allow empty pointclouds to be created or raise
+            `simulocloud.exceptions.EmptyPointCloud`
 
         Returns
         -------
@@ -372,9 +373,9 @@ class NoneFormatter(string.Formatter):
             else: raise e
 
 
-class Bounds(namedtuple('Bounds', ['minx', 'miny', 'minz',
+class Bounds(collections.namedtuple('Bounds', ['minx', 'miny', 'minz',
                                    'maxx', 'maxy', 'maxz'])):
-    """`namedtuple` describing the bounds box surrounding PointCloud."""
+    """`collections.namedtuple` describing the bounds box surrounding PointCloud."""
     __slots__ = ()
     _format = '{:.3g}'
 
@@ -386,7 +387,7 @@ class Bounds(namedtuple('Bounds', ['minx', 'miny', 'minz',
         return NoneFormatter().format(template, *self)
 
 class InfBounds(Bounds):
-    """`Bounds` namedtuple, with `None`s coerced to `inf`s."""
+    """`Bounds` with `None`s coerced to `inf`s."""
     __slots__ = ()
 
     def __new__(cls, minx, miny, minz, maxx, maxy, maxz):
@@ -432,17 +433,17 @@ def _get_las_npoints(fpath):
     Note: npoints is read from the file's header, which is not guuaranteed
           to be at all accurate. This may be a source of error.
     """
-    with File(fpath) as f:
+    with laspy.file.File(fpath) as f:
         return f.header.count
 
 def _get_las_xyz(fpath):
     """Return [x, y, z] list of coordinate arrays from .las file."""
-    with File(fpath) as f:
+    with laspy.file.File(fpath) as f:
         return [f.x, f.y, f.z]
 
 def _get_las_bounds(fpath):
     """Return the bounds of file at fpath."""
-    with File(fpath) as f:
+    with laspy.file.File(fpath) as f:
         return Bounds(*(f.header.min + f.header.max))
 
 def _intersects_1D(A, B):
@@ -460,7 +461,7 @@ def _iter_out_of_bounds(pc, bounds):
     Arguments
     ---------
     pc: `PointCloud` instance
-    bounds: `Bounds` namedtuple
+    bounds: `Bounds`
         (minx, miny, minz, maxx, maxy, maxz) to test point coordinates against
     
     Returns
@@ -490,7 +491,7 @@ def are_out_of_bounds(pc, bounds):
     Arguments
     ---------
     pc: `PointCloud` instance
-    bounds: `Bounds` namedtuple
+    bounds: `Bounds`
         (minx, miny, minz, maxx, maxy, maxz) to test point coordinates against
     
     Returns
@@ -506,7 +507,7 @@ def are_out_of_bounds(pc, bounds):
     return oob
 
 def _get_dimension_bounds(pc, d):
-    """Return the (min, max) of dimension `d` in bounds of PointCloud (or Bounds namedtuple) `pc`."""
+    """Return the (min, max) of dimension `d` in bounds of `PointCloud` (or `Bounds`) `pc`."""
     try:
         bounds = pc.bounds
     except AttributeError:
@@ -514,22 +515,22 @@ def _get_dimension_bounds(pc, d):
     
     return tuple([getattr(bounds, b + d) for b in ('min', 'max')])
 
-def merge_bounds(bounds):
+def merge_bounds(ibounds):
     """Find overall bounds of pcs (or bounds).
     
     Arguments
     ---------
-    pcs: iterable of `Bounds` namedtuple (or similiar)
+    ibounds: iterable of `Bounds` (or similiar)
          None values will be treated as appropriate inf
     
     Returns
     -------
-    `Bounds` namedtuple
+    `Bounds`
         describing total area covered by args
     
     """
     # Coerce Nones to Infs
-    all_bounds = [InfBounds(*bounds) for bounds in bounds]
+    all_bounds = [InfBounds(*bounds) for bounds in ibounds]
     
     # Extract mins/maxs of dimensions
     all_bounds = np.array(all_bounds)
@@ -611,7 +612,7 @@ def fractional_splitlocs(bounds, nx=None, ny=None, nz=None):
     
     Arguments
     ---------
-    bounds: `Bounds` namedtuple (or similiar)
+    bounds: `Bounds` (or similiar)
         bounds within which to create tiles
     nx, ny, nz : int (default=None)
         number of pointclouds desired along each axis
@@ -640,7 +641,7 @@ def make_edges_grid(bounds, splitlocs):
     
     Arguments
     ---------
-    bounds: tuple or `Bounds` namedtuple
+    bounds: tuple or `Bounds` 
        (minx, miny, minz, maxx, maxy, maxz) bounds of entire grid
     splitlocs: dict {d: dlocs, ...}
         same as argument to `retile`

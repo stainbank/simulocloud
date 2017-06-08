@@ -1,15 +1,12 @@
-from simulocloud.pointcloud import (PointCloud, Bounds, InfBounds,
-                                    merge, retile, fractional_splitlocs,
-                                    merge_bounds, _get_dimension_bounds,
-                                    make_edges_grid)
-from simulocloud.exceptions import EmptyPointCloud
-from laspy.file import File
 import pytest
+import simulocloud.pointcloud
+import simulocloud.exceptions
+import laspy.file
 import numpy as np
 import cPickle as pkl
 import itertools
 import os
-from math import ceil
+import math
 
 """ Constants and fixtures """
 # Data type used for arrays
@@ -26,47 +23,47 @@ def input_array():
 @pytest.fixture
 def expected_las_arr(fname='ALS.las'):
     """The array of points held in the example las data"""
-    with File(abspath(fname)) as f:
+    with laspy.file.File(abspath(fname)) as f:
         return np.array([f.x, f.y, f.z])
 
 @pytest.fixture
 def pc_arr(input_array):
     """Set up a PointCloud instance using array test data."""
-    return PointCloud(input_array)
+    return simulocloud.pointcloud.PointCloud(input_array)
 
 @pytest.fixture
 def pc_arr_x10(pc_arr):
     """Multiply pc_arr values by 10."""
-    return PointCloud((pc_arr.arr*10))
+    return simulocloud.pointcloud.PointCloud((pc_arr.arr*10))
 
 @pytest.fixture
 def pc_las(fname='ALS.las'):
     """Set up a PointCloud instance using single file test data."""
-    return PointCloud.from_las(abspath(fname))
+    return simulocloud.pointcloud.PointCloud.from_las(abspath(fname))
 
 @pytest.fixture
 def pc_multilas(fdir='ALS_tiles'):
     """Set up a PointCloud instance using multiple file test data, tiled from pc_las."""
-    return PointCloud.from_las(*get_fpaths(fdir))
+    return simulocloud.pointcloud.PointCloud.from_las(*get_fpaths(fdir))
 
 @pytest.fixture
 def none_bounds():
     """A Bounds nametuple with all bounds set to None."""
-    return Bounds(*(None,)*6)
+    return simulocloud.pointcloud.Bounds(*(None,)*6)
 
 @pytest.fixture
 def inf_bounds():
     """A Bounds namedtuple with all bounds set to inf/-inf."""
-    return Bounds(*(np.inf,)*3 + (np.inf,)*3)
+    return simulocloud.pointcloud.Bounds(*(np.inf,)*3 + (np.inf,)*3)
 
 @pytest.fixture
 def make_grids(pc_las):
     """Create overlapping pointclouds, retile, and create associated edges."""
     pcs = overlap_pcs([pc_las], nx=4, ny=3, overlap=0.5)
-    bounds = merge_bounds((pc_las.bounds for pc in pcs))
-    splitlocs = fractional_splitlocs(bounds, nx=6, ny=5, nz=None)
-    tile_grid = retile(pcs, splitlocs)
-    edges_grid = make_edges_grid(bounds, splitlocs)
+    bounds = simulocloud.pointcloud.merge_bounds((pc_las.bounds for pc in pcs))
+    splitlocs = simulocloud.pointcloud.fractional_splitlocs(bounds, nx=6, ny=5, nz=None)
+    tile_grid = simulocloud.pointcloud.retile(pcs, splitlocs)
+    edges_grid = simulocloud.pointcloud.make_edges_grid(bounds, splitlocs)
 
     return splitlocs, tile_grid, edges_grid
     
@@ -106,11 +103,11 @@ def overlap_pcs(pcs, overlap, nx=None, ny=None, nz=None):
     
     """
     nsplits = {d: n for d, n in zip('xyz', (nx, ny, nz)) if n is not None}
-    bounds = merge_bounds(pc.bounds for pc in pcs)
+    bounds = simulocloud.pointcloud.merge_bounds(pc.bounds for pc in pcs)
     
     overlapping = []
     for d, n in nsplits.iteritems():
-        mind, maxd = _get_dimension_bounds(bounds, d)
+        mind, maxd = simulocloud.pointcloud._get_dimension_bounds(bounds, d)
         edges, step = np.linspace(mind, maxd, num=n+1,
                                   endpoint=True, retstep=True)
         offset = overlap * step/2
@@ -142,14 +139,14 @@ def test_PointCloud_from_multiple_las(pc_multilas, pc_las):
 
 def test_PointCloud_from_tiles(fpath='data/ALS.las', fdir='ALS_tiles'):
     """Can a specific-area PointCloud be constructed from multiple .las files?"""
-    bounds = Bounds(90, 20, None, 100, 30, None)
-    cropped = PointCloud.from_las(fpath).crop(bounds)
-    tiled = PointCloud.from_tiles(bounds, *get_fpaths(fdir))
+    bounds = simulocloud.pointcloud.Bounds(90, 20, None, 100, 30, None)
+    cropped = simulocloud.pointcloud.PointCloud.from_las(fpath).crop(bounds)
+    tiled = simulocloud.pointcloud.PointCloud.from_tiles(bounds, *get_fpaths(fdir))
     assert (len(cropped) == len(tiled)) and (cropped.bounds == tiled.bounds)
 
 def test_empty_PointCloud():
     """Is the PointCloud generated from `None` empty?"""
-    assert not len(PointCloud(None))
+    assert not len(simulocloud.pointcloud.PointCloud(None))
 
 def test_arr_generation(pc_arr, input_array):
     """Does PointCloud.arr work as expected?."""
@@ -169,19 +166,19 @@ def test_none_bounds_can_print(capfd, none_bounds):
 def test_bad_value_bounds_fail_to_print(capfd, pc_arr):
     """Do `Bound`s fail to print if any value is not a numeric or `None`?"""
     with pytest.raises(ValueError):
-        print Bounds(*(pc_arr,)*6)
+        print simulocloud.pointcloud.Bounds(*(pc_arr,)*6)
 
 def test_InfBounds_coerces_Nones(capfd, none_bounds):
     """Does `InfBounds` coerce `None`s to negative (mins) and positive (maxs)`inf`s?"""
-    print InfBounds(*none_bounds)
+    print simulocloud.pointcloud.InfBounds(*none_bounds)
     out, err = capfd.readouterr()
     assert out == ("Bounds: minx=-inf, miny=-inf, minz=-inf\n        "
                            "maxx=inf, maxy=inf, maxz=inf\n")
 
 def test_empty_pointcloud_has_no_bounds():
     """Is an exception raised when attempting to check bounds of empty PointCloud?"""
-    pc = PointCloud([[],[],[]])
-    with pytest.raises(EmptyPointCloud):
+    pc = simulocloud.pointcloud.PointCloud([[],[],[]])
+    with pytest.raises(simulocloud.exceptions.EmptyPointCloud):
         pc.bounds
 
 def test_len_works(pc_arr):
@@ -246,7 +243,7 @@ def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, d):
 
 def test_cropping_to_nothing_raises_exception_when_specified(pc_arr, inf_bounds):
     """Does PointCloud cropping refuse to return an empty PointCloud?"""
-    with pytest.raises(EmptyPointCloud):
+    with pytest.raises(simulocloud.exceptions.EmptyPointCloud):
         pc_arr.crop(inf_bounds, allow_empty=False)
 
 def test_cropping_to_nothing_returns_empty(pc_arr, inf_bounds):
@@ -274,14 +271,14 @@ def test_PointCloud_exports_transparently_to_txt(pc_arr, tmpdir):
     fpath = tmpdir.join("_INPUT_DATA.txt").strpath
     pc_arr.to_txt(fpath) 
 
-    assert np.allclose(pc_arr.arr, PointCloud.from_txt(fpath).arr)
+    assert np.allclose(pc_arr.arr, simulocloud.pointcloud.PointCloud.from_txt(fpath).arr)
 
 def test_PointCloud_exports_transparently_to_las(pc_las, tmpdir):
     """Are the points in the file output by PointCloud.to_las identical to input?"""
     fpath = tmpdir.join('pc_las.las').strpath
     pc_las.to_las(fpath)
     
-    assert np.allclose(pc_las.arr, PointCloud.from_las(fpath).arr)
+    assert np.allclose(pc_las.arr, simulocloud.pointcloud.PointCloud.from_las(fpath).arr)
 
 def test_PointCloud_can_downsample(pc_las):
     """Does downsampling a pointcloud to len n preserve n points?"""
@@ -290,12 +287,12 @@ def test_PointCloud_can_downsample(pc_las):
     assert len(pc) == n and len(np.intersect1d(pc_las.points, np.unique(pc.points))) == len(pc.points)
 
 def test_pointclouds_merged_by_function(pc_las, fdir='ALS_tiles'):
-    pcs = [PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
-    merged = merge(PointCloud, *pcs)
+    pcs = [simulocloud.pointcloud.PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
+    merged = simulocloud.pointcloud.merge(simulocloud.pointcloud.PointCloud, *pcs)
     assert same_len_and_bounds(merged, pc_las)
 
 def test_pointclouds_merged_by_method(pc_las, fdir='ALS_tiles'):
-    pcs = [PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
+    pcs = [simulocloud.pointcloud.PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
     merged = pcs.pop().merge(*pcs)
     assert same_len_and_bounds(merged, pc_las)
 
@@ -307,21 +304,21 @@ def test_pointcloud_split_along_dlocs(pc_las, axis):
     at least one point between each (1m) interval --- otherwise error
     """
     # Split pointcloud at integer intervals
-    mind, maxd = _get_dimension_bounds(pc_las, axis)
-    dlocs = range(*(int(ceil(dbound)) for dbound in (mind, maxd)))
+    mind, maxd = simulocloud.pointcloud._get_dimension_bounds(pc_las, axis)
+    dlocs = range(*(int(math.ceil(dbound)) for dbound in (mind, maxd)))
     pcs = pc_las.split(axis, dlocs)
     
     # Check points fall between split locations
     splitbounds = zip([mind] + dlocs, #upper
                       dlocs + [maxd]) #lower
     for pc, (mind_split, maxd_split) in zip(pcs, splitbounds):
-        mind, maxd = _get_dimension_bounds(pc, axis)
+        mind, maxd = simulocloud.pointcloud._get_dimension_bounds(pc, axis)
         assert mind >= mind_split and maxd <= maxd_split
 
 def test_pointcloud_retiling_preserves_points(pc_las, none_bounds):
     """Does `retile` maintain the points of a single input pointcloud?"""
-    splitlocs = fractional_splitlocs(pc_las.bounds, nx=10, ny=20, nz=None)
-    pcs_3d = retile([pc_las], splitlocs)
+    splitlocs = simulocloud.pointcloud.fractional_splitlocs(pc_las.bounds, nx=10, ny=20, nz=None)
+    pcs_3d = simulocloud.pointcloud.retile([pc_las], splitlocs)
     
     assert same_len_and_bounds(np.sum(pcs_3d), pc_las)
 
@@ -340,7 +337,7 @@ def test_overlapping_pointclouds_retiling_obeys_splitlocs(make_grids):
                         try:
                             bound = getattr(pc.bounds, b+d)
                             assert compare(bound, dloc)
-                        except EmptyPointCloud:
+                        except simulocloud.exceptions.EmptyPointCloud:
                             pass
 
 def test_edges_grid_has_correct_shape(make_grids):

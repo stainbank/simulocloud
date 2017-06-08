@@ -5,9 +5,9 @@ See, plot and visually explore pointclouds
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from itertools import izip
-from .exceptions import BadDims, WrongNDims
+import mpl_toolkits.mplot3d
+import itertools
+import simulocloud.exceptions
 
 # Mapping of dimension to index in bounds
 _IDIM = {'x': 0, 'y': 1, 'z': 2}
@@ -52,9 +52,9 @@ def scatter(pcs, dims, bounds=None, highlight=None, n=10000,
         trace = {2: lambda x0y0x1y1: (_trace_rectangle(*x0y0x1y1),),
                  3: _trace_cuboid}[ndims]
     except(AttributeError):
-        raise BadDims('dims must be str (not {})'.format(type(dims))) 
+        raise simulocloud.exceptions.BadDims('dims must be str (not {})'.format(type(dims))) 
     except(KeyError): 
-        raise WrongNDims('dims must have either 2 or 3 dims (had {})'.format(ndims))
+        raise simulocloud.exceptions.WrongNDims('dims must have either 2 or 3 dims (had {})'.format(ndims))
      
     # Set up figure
     fig = plt.figure(figsize=figsize)
@@ -92,7 +92,7 @@ def _iter_scatter_args(pcs, dims, colours, labels):
     if labels is None:
         labels = _iteralphabet()
         
-    for pc, colour, label in izip(pcs, colours, labels):
+    for pc, colour, label in itertools.izip(pcs, colours, labels):
         arrs = (getattr(pc, dim.lower()) for dim in dims) # extract coordinates
         kwargs = {'c': colour,
                   'label': label}
