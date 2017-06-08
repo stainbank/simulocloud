@@ -4,7 +4,6 @@ import simulocloud.exceptions
 import laspy.file
 import numpy as np
 import cPickle as pkl
-import itertools
 import os
 import math
 
@@ -37,11 +36,6 @@ def pc_arr_x10(pc_arr):
     return simulocloud.pointcloud.PointCloud((pc_arr.arr*10))
 
 @pytest.fixture
-def pc_las(fname='ALS.las'):
-    """Set up a PointCloud instance using single file test data."""
-    return simulocloud.pointcloud.PointCloud.from_las(abspath(fname))
-
-@pytest.fixture
 def pc_multilas(fdir='ALS_tiles'):
     """Set up a PointCloud instance using multiple file test data, tiled from pc_las."""
     return simulocloud.pointcloud.PointCloud.from_las(*get_fpaths(fdir))
@@ -56,19 +50,7 @@ def inf_bounds():
     """A Bounds namedtuple with all bounds set to inf/-inf."""
     return simulocloud.pointcloud.Bounds(*(np.inf,)*3 + (np.inf,)*3)
 
-@pytest.fixture
-def make_grids(pc_las):
-    """Create overlapping pointclouds, retile, and create associated edges."""
-    pcs = overlap_pcs([pc_las], nx=4, ny=3, overlap=0.5)
-    bounds = simulocloud.pointcloud.merge_bounds((pc_las.bounds for pc in pcs))
-    splitlocs = simulocloud.pointcloud.fractional_splitlocs(bounds, nx=6, ny=5, nz=None)
-    tile_grid = simulocloud.pointcloud.retile(pcs, splitlocs)
-    edges_grid = simulocloud.pointcloud.make_edges_grid(bounds, splitlocs)
-
-    return splitlocs, tile_grid, edges_grid
-    
 """ Helper functions """
-
 def abspath(fname, fdir='data'):
     """Return the absolute filepath of filename in (relative) directory."""
     return os.path.join(os.path.dirname(__file__), fdir, fname)
@@ -314,49 +296,3 @@ def test_pointcloud_split_along_dlocs(pc_las, axis):
     for pc, (mind_split, maxd_split) in zip(pcs, splitbounds):
         mind, maxd = simulocloud.pointcloud._get_dimension_bounds(pc, axis)
         assert mind >= mind_split and maxd <= maxd_split
-
-def test_pointcloud_retiling_preserves_points(pc_las, none_bounds):
-    """Does `retile` maintain the points of a single input pointcloud?"""
-    splitlocs = simulocloud.pointcloud.fractional_splitlocs(pc_las.bounds, nx=10, ny=20, nz=None)
-    pcs_3d = simulocloud.pointcloud.retile([pc_las], splitlocs)
-    
-    assert same_len_and_bounds(np.sum(pcs_3d), pc_las)
-
-def test_overlapping_pointclouds_retiling_obeys_splitlocs(make_grids):
-    """Does `retile` split overlapping pointclouds along the specified locations?"""
-    splitlocs, tile_grid, _ = make_grids
-    # Test that tiles are within bounds in each dimension
-    for axis, d in enumerate('xyz'):
-        for pcs_2d in np.swapaxes(tile_grid, 2, axis): #iterate through axis last
-            for pcs in pcs_2d:
-                for i, dloc in enumerate(splitlocs[d]):
-                    # Check split location divides adjacent pointclouds
-                    for pc, b, compare in zip(pcs[i:i+2],
-                                             ('max', 'min'),
-                                             (np.less, np.greater_equal)):
-                        try:
-                            bound = getattr(pc.bounds, b+d)
-                            assert compare(bound, dloc)
-                        except simulocloud.exceptions.EmptyPointCloud:
-                            pass
-
-def test_edges_grid_has_correct_shape(make_grids):
-    """Does the edges array have one extra element per axis than the tile array?"""
-    _, tile_grid, edges_grid = make_grids
-    assert edges_grid.shape[3] == 3 # x,y,z
-    for n_tile, n_bounds in zip(tile_grid.shape, edges_grid.shape[:3]):
-        assert n_bounds == n_tile+1
-
-def test_bounds_grid_describes_bounds_of_tile_grid(make_grids):
-    """Does the grid returned by `make_edges_grid` describe that of `retile`?"""
-    _, tile_grid, edges_grid = make_grids
-    for ix, iy, iz in itertools.product(*map(xrange, tile_grid.shape)):
-        # Ensure pointcloud bounds fall within edges
-        bounds = tile_grid[ix, iy, iz].bounds
-        for compare, edges, bounds in zip(
-                (np.less_equal, np.greater_equal), # both edges inclusive due to outermost edges
-                (edges_grid[ix, iy, iz], edges_grid[ix+1, iy+1, iz+1]), # adjacent pointclouds
-                (bounds[:3], bounds[3:])): # mins, maxs
-            for edge, bound in zip(edges, bounds):
-                print compare, edge, bound
-                assert compare(edge, bound)
