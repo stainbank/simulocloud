@@ -3,6 +3,23 @@ tile
 """
 import numpy as np
 import simulocloud.pointcloud
+import simulocloud.exceptions
+
+class Tile(simulocloud.pointcloud.PointCloud):
+    """An immmutable pointcloud"""
+    def __init__(self, xyz, header=None):
+        """."""
+        super(Tile, self).__init__(xyz, header)
+        self._arr.flags.writeable = False
+    
+    @property
+    def arr(self):
+        """Get, but not set, the underlying (x, y, z) array of point coordinates."""
+        return self._arr
+    
+    @arr.setter
+    def arr(self, value):
+        raise simulocloud.exceptions.TileException("Tile pointcloud cannot be modified")
 
 class Tiles(object):
     """Container for tiles grid."""

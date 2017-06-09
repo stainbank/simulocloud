@@ -18,7 +18,24 @@ def make_grids(pc_las):
     
     return splitlocs, tile_grid, edges_grid
     
+@pytest.fixture
+def tile():
+    return simulocloud.tiles.Tile(test_pointcloud._INPUT_DATA)
+
 """ tests """
+def test_tile_array_is_immutable(tile):
+    """Is an error raised when trying to modify the coordinates of a `Tile`?"""
+    with pytest.raises(ValueError):
+        tile.arr += 2.
+    with pytest.raises(ValueError):
+        tile.arr[0,0] = 1.
+
+def test_tile_array_cannot_be_changed(tile):
+    """Is an error raised when trying to set to the coordinates of a `Tile`?"""
+    arr2 = tile.arr*2
+    with pytest.raises(simulocloud.exceptions.TileException):
+        tile.arr = arr2
+
 def test_pointcloud_retiling_preserves_points(pc_las):
     """Does `retile` maintain the points of a single input pointcloud?"""
     splitlocs = simulocloud.tiles.fractional_splitlocs(pc_las.bounds, nx=10, ny=20, nz=None)
