@@ -67,18 +67,18 @@ class PointCloud(object):
         
         # Store points as 3*n array
         x, y, z = xyz # ensure only 3 coordinates
-        self.arr = np.stack([x, y, z])
+        self._arr = np.stack([x, y, z])
 
         if header is not None:
             self._header = header
 
     def __len__(self):
         """Number of points in point cloud"""
-        return self.arr.shape[1]
+        return self._arr.shape[1]
 
     def __add__(self, other):
         """Concatenate two PointClouds."""
-        return type(self)(np.concatenate([self.arr, other.arr], axis=1))
+        return type(self)(np.concatenate([self._arr, other.arr], axis=1))
 
     """ Constructor methods """
  
@@ -149,19 +149,28 @@ class PointCloud(object):
 
     """ Instance methods """
     @property
+    def arr(self):
+        """Get or set the underlying (x, y, z) array of point coordinates."""
+        return self._arr
+    
+    @arr.setter
+    def arr(self, value):
+        self._arr = value
+    
+    @property
     def x(self):
         """The x dimension of point coordinates."""
-        return self.arr[0]
+        return self._arr[0]
 
     @property
     def y(self):
         """The y dimension of point coordinates."""
-        return self.arr[1]
+        return self._arr[1]
 
     @property
     def z(self):
         """The z dimension of point coordinates."""
-        return self.arr[2]
+        return self._arr[2]
 
     @property
     def points(self):
@@ -172,7 +181,7 @@ class PointCloud(object):
         structured np.ndarray containing 'x', 'y' and 'z' point coordinates
     
         """
-        return self.arr.T.ravel().view(
+        return self._arr.T.ravel().view(
                dtype=[('x', self.dtype), ('y', self.dtype), ('z', self.dtype)])
 
     @property
@@ -188,7 +197,7 @@ class PointCloud(object):
         `simulocloud.exceptions.EmptyPointCloud`
             if there are no points
         """
-        x,y,z = self.arr
+        x,y,z = self._arr
         try:
             return Bounds(x.min(), y.min(), z.min(),
                           x.max(), y.max(), z.max())
@@ -251,9 +260,9 @@ class PointCloud(object):
                 raise simulocloud.exceptions.EmptyPointCloud(
                           "No points in crop bounds:\n{}".format(bounds))
          
-        cropped = type(self)(self.arr[:, ~oob])
+        cropped = type(self)(self._arr[:, ~oob])
         if destructive:
-            self.__init__(self.arr[:, oob])
+            self.__init__(self._arr[:, oob])
         return cropped
 
     def to_txt(self, fpath):
@@ -265,7 +274,7 @@ class PointCloud(object):
             path to file to write 
         
         """
-        np.savetxt(fpath, self.arr.T)
+        np.savetxt(fpath, self._arr.T)
 
     def to_las(self, fpath):
         """Export point cloud coordinates to .las file.
@@ -278,7 +287,7 @@ class PointCloud(object):
         """
         with laspy.file.File(fpath, mode='w', header=self.header,
                              vlrs=[laspy.header.VLR(**_VLR_DEFAULT)]) as f:
-            f.x, f.y, f.z = self.arr
+            f.x, f.y, f.z = self._arr
 
     def downsample(self, n):
         """Randomly sample the point cloud.
@@ -296,7 +305,7 @@ class PointCloud(object):
         """
         n = min(n, len(self))
         idx = np.random.choice(len(self), n, replace=False)
-        return type(self)(self.arr[:, idx])
+        return type(self)(self._arr[:, idx])
 
 
     def merge(self, *pointclouds):
@@ -333,7 +342,7 @@ class PointCloud(object):
         # Copy pointcloud
         if pctype is None:
             pctype = type(self)
-        pc = pctype(self.arr)
+        pc = pctype(self._arr)
         
         # Sequentially (high -> low) split pointcloud
         none_bounds = Bounds(*(None,)*6)
