@@ -251,7 +251,7 @@ class PointCloud(object):
         
         """
         bounds = Bounds(*bounds)
-        oob = are_out_of_bounds(self, bounds)
+        oob = points_out_of_bounds(self, bounds)
         # Deal with empty pointclouds
         if oob.all():
             if allow_empty:
@@ -464,7 +464,7 @@ def _intersects_3D(A, B):
     return all([_intersects_1D((A[i], A[i+3]), (B[i], B[i+3]))
                 for i in range(3)])
 
-def _iter_out_of_bounds(pc, bounds):
+def _iter_points_out_of_bounds(pc, bounds):
     """Iteratively determine point coordinates outside of bounds.
 
     Arguments
@@ -494,7 +494,7 @@ def _iter_out_of_bounds(pc, bounds):
             if bound is not None:
                 yield compare(dim, bound)
 
-def are_out_of_bounds(pc, bounds):
+def points_out_of_bounds(pc, bounds):
     """ Determine whether each point in pc is out of bounds
     
     Arguments
@@ -511,7 +511,7 @@ def are_out_of_bounds(pc, bounds):
     
     """
     oob = np.zeros(len(pc), dtype=bool)
-    for comparison in _iter_out_of_bounds(pc, bounds):
+    for comparison in _iter_points_out_of_bounds(pc, bounds):
         oob = np.logical_or(comparison, oob)
     return oob
 
