@@ -21,12 +21,36 @@ class Tile(simulocloud.pointcloud.PointCloud):
     def arr(self, value):
         raise simulocloud.exceptions.TileException("Tile pointcloud cannot be modified")
 
-class Tiles(object):
+class TilesGrid(object):
     """Container for tiles grid."""
-    def __init__(self):
-        raise NotImplemented
+    def __init__(self, pcs, splitlocs):
+        # Sort splitlocs and determine their bounds
+        mins, maxs = [],[]
+        for d in 'xyz':
+            dlocs = sorted(splitlocs.get(d, []))
+            try:
+                mind, maxd = dlocs[0], dlocs[-1]
+            except IndexError:
+                mind, maxd = np.inf, -np.inf # always within another bounds
+            splitlocs[d] = dlocs
+            mins.append(mind), maxs.append(maxd)
+        
+        # Ensure grid will be valid
+        splitloc_bounds = simulocloud.pointcloud.Bounds(*(mins + maxs))
+        pcs_bounds = simulocloud.pointcloud.merge_bounds([pc.bounds for pc in pcs])
+        if not simulocloud.pointcloud._inside_bounds(splitloc_bounds, pcs_bounds):
+            raise ValueError("Split locations must be within total bounds of pointclouds")
+        
+        self.tiles = retile(pcs, splitlocs, pctype=Tile)
+        self.edges = make_edges_grid(pcs_bounds, splitlocs)
+    
+    @property
+    def bounds(self):
+        """The bounds of the entire grid of tiles."""
+        bounds = np.concatenate([self.edges[0,0,0], self.edges[-1,-1,-1]])
+        return simulocloud.pointcloud.Bounds(*bounds)
 
-def retile(pcs, splitlocs, pctype=simulocloud.PointCloud):
+def retile(pcs, splitlocs, pctype=Tile):
     """Return a 3D grid of (merged) pointclouds split in x, y and z dimensions.
     
     Arguments
