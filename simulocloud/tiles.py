@@ -2,6 +2,7 @@
 tile
 """
 import numpy as np
+import itertools
 import simulocloud.pointcloud
 import simulocloud.exceptions
 
@@ -90,6 +91,21 @@ class TilesGrid(object):
         """The bounds of the entire grid of tiles."""
         bounds = np.concatenate([self.edges[0,0,0], self.edges[-1,-1,-1]])
         return simulocloud.pointcloud.Bounds(*bounds)
+
+    def is_valid(self):
+        """Return True if grid edges accurately describes tiles."""
+        for ix, iy, iz in itertools.product(*map(xrange, self.tiles.shape)):
+            # Ensure pointcloud bounds fall within edges
+            tile = self.tiles[ix, iy, iz]
+            for compare, edges, bounds in zip(
+                    (np.less_equal, np.greater_equal), # both edges inclusive due to outermost edges
+                    (self.edges[ix, iy, iz], self.edges[ix+1, iy+1, iz+1]),
+                    (tile.bounds[:3], tile.bounds[3:])): # mins, maxs
+                for edge, bound in zip(edges, bounds):
+                    if not compare(edge, bound):
+                        return False
+        
+        return True
 
 def retile(pcs, splitlocs, pctype=Tile):
     """Return a 3D grid of (merged) pointclouds split in x, y and z dimensions.

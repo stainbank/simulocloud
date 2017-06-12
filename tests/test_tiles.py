@@ -83,3 +83,7 @@ def test_edges_grid_describes_bounds_of_tile_grid(grid):
                 (tile.bounds[:3], tile.bounds[3:])): # mins, maxs
             for edge, bound in zip(edges, bounds):
                 assert compare(edge, bound)
+
+def test_TilesGrid_is_self_validating(grid):
+    """The result of this test should be identical to that of `test_edges_grid_describes_bounds_of_tile_grid`."""
+    assert grid.is_valid
