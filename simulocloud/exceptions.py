@@ -15,6 +15,10 @@ class TileException(PointCloudException):
     """Base exceptions for the `simulocloud.tiles.Tile` subclass."""
     pass
 
+class TilesGridException(SimulocloudException):
+    """Base exceptions for the `simulocloud.tiles.TilesGrid` class."""
+    pass
+
 class VisualiseException(SimulocloudException):
     """Base exception for the visualise module."""
     pass

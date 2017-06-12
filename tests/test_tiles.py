@@ -4,6 +4,7 @@ import numpy as np
 import itertools
 import simulocloud.pointcloud
 import simulocloud.tiles
+import simulocloud.exceptions
 import test_pointcloud
 
 """ fixtures """
@@ -86,4 +87,16 @@ def test_edges_grid_describes_bounds_of_tile_grid(grid):
 
 def test_TilesGrid_is_self_validating(grid):
     """The result of this test should be identical to that of `test_edges_grid_describes_bounds_of_tile_grid`."""
-    assert grid.is_valid
+    assert grid.validate()
+    grid.edges *= 100
+    assert not grid.validate()
+
+def test_TilesGrid_initialisation_fails_if_invalid(pcs, splitlocs):
+    bounds = simulocloud.pointcloud.merge_bounds(pc.bounds for pc in pcs)
+    tiles = simulocloud.tiles.retile(pcs, splitlocs)
+    # Make splitlocs out of range
+    badsplitlocs = {d: [loc*100 for loc in dlocs] for d, dlocs in splitlocs.iteritems()}
+    edges = simulocloud.tiles.make_edges_grid(bounds, badsplitlocs)
+
+    with pytest.raises(simulocloud.exceptions.TilesGridException):
+        simulocloud.tiles.TilesGrid(tiles, edges)

@@ -24,7 +24,7 @@ class Tile(simulocloud.pointcloud.PointCloud):
 
 class TilesGrid(object):
     """Container for tiles grid."""
-    def __init__(self, tiles, edges):
+    def __init__(self, tiles, edges, validate=True):
         """Directly initialise `TilesGrid` from grids
         
         Arguments
@@ -40,6 +40,10 @@ class TilesGrid(object):
         """
         self.tiles = tiles
         self.edges = edges
+        if validate:
+            if not self.validate():
+                msg = "Tiles do not fit into edges grid"
+                raise simulocloud.exceptions.TilesGridException(msg)
     
     @classmethod
     def from_splitlocs(cls, pcs, splitlocs):
@@ -84,7 +88,7 @@ class TilesGrid(object):
         tiles = retile(pcs, splitlocs, pctype=Tile)
         edges = make_edges_grid(pcs_bounds, splitlocs)
         
-        return cls(tiles, edges)
+        return cls(tiles, edges, validate=False)
     
     @property
     def bounds(self):
@@ -92,7 +96,7 @@ class TilesGrid(object):
         bounds = np.concatenate([self.edges[0,0,0], self.edges[-1,-1,-1]])
         return simulocloud.pointcloud.Bounds(*bounds)
 
-    def is_valid(self):
+    def validate(self):
         """Return True if grid edges accurately describes tiles."""
         for ix, iy, iz in itertools.product(*map(xrange, self.tiles.shape)):
             # Ensure pointcloud bounds fall within edges
