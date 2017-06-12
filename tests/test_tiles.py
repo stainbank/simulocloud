@@ -27,7 +27,7 @@ def splitlocs(pcs):
 @pytest.fixture
 def grid(pcs, splitlocs):
     """Construct a `TilesGrid` instance."""
-    return simulocloud.tiles.TilesGrid(pcs, splitlocs)
+    return simulocloud.tiles.TilesGrid.from_splitlocs(pcs, splitlocs)
 
 """ tests """
 def test_tile_array_is_immutable(tile):

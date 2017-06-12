@@ -23,7 +23,46 @@ class Tile(simulocloud.pointcloud.PointCloud):
 
 class TilesGrid(object):
     """Container for tiles grid."""
-    def __init__(self, pcs, splitlocs):
+    def __init__(self, tiles, edges):
+        """Directly initialise `TilesGrid` from grids
+        
+        Arguments
+        ---------
+        tiles: `numpy.ndarray` (ndim=3, dtype=object)
+            3D array containing pointclouds (usually of type `Tile`) spatially
+            seperated by uniform edges ordered along array axes:
+                 0:x, 1:y, 2:z
+        edges: `numpy.ndarray` (ndim=4, dtype=float)
+            three 3D x, y and z coordinate arrays concatenated in 4th axis
+            defining edges between (and around) `tiles`
+        
+        """
+        self.tiles = tiles
+        self.edges = edges
+    
+    @classmethod
+    def from_splitlocs(cls, pcs, splitlocs):
+        """Construct `TilesGrid` instance by retiling pointclouds.
+        
+        Arguments
+        ---------
+        pcs: seq of `simulocloud.pointcloud.Pointcloud`
+        splitlocs: dict {d: dlocs, ...}, where:
+            d: str
+                'x', 'y' and/or 'z' dimension
+            dlocs: list
+                locations along specified axis at which to split
+                (see docs for `simulocloud.pointcloud.PointCloud.split`)
+
+            dimensions can be omitted, resulting in no splitting in that
+            dimension
+        
+        Returns
+        -------
+        `TilesGrid` instance
+            internal edges defined by `splitlocs`, grid bounds equal to merged
+            bounds of `pcs`
+        """
         # Sort splitlocs and determine their bounds
         mins, maxs = [],[]
         for d in 'xyz':
@@ -41,8 +80,10 @@ class TilesGrid(object):
         if not simulocloud.pointcloud._inside_bounds(splitloc_bounds, pcs_bounds):
             raise ValueError("Split locations must be within total bounds of pointclouds")
         
-        self.tiles = retile(pcs, splitlocs, pctype=Tile)
-        self.edges = make_edges_grid(pcs_bounds, splitlocs)
+        tiles = retile(pcs, splitlocs, pctype=Tile)
+        edges = make_edges_grid(pcs_bounds, splitlocs)
+        
+        return cls(tiles, edges)
     
     @property
     def bounds(self):
