@@ -7,17 +7,24 @@ class SimulocloudException(Exception):
     pass
 
 
-class PointcloudException(SimulocloudException):
-    """Base exception for the pointcloud module."""
+class PointCloudException(SimulocloudException):
+    """Base exception for the `simulocloud.pointcloud.Pointcloud` class."""
     pass
 
+class TileException(PointCloudException):
+    """Base exceptions for the `simulocloud.tiles.Tile` subclass."""
+    pass
+
+class TilesGridException(SimulocloudException):
+    """Base exceptions for the `simulocloud.tiles.TilesGrid` class."""
+    pass
 
 class VisualiseException(SimulocloudException):
     """Base exception for the visualise module."""
     pass
 
-class EmptyPointCloud(PointcloudException, ValueError):
-    """An empty PointCloud would be created against user wishes."""
+class EmptyPointCloud(PointCloudException, ValueError):
+    """An empty PointCloud is being created or summarised."""
     pass
 
 class DimsError(VisualiseException):
