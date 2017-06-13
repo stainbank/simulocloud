@@ -44,7 +44,47 @@ class TilesGrid(object):
             if not self.validate():
                 msg = "Tiles do not fit into edges grid"
                 raise simulocloud.exceptions.TilesGridException(msg)
-    
+
+    def __getitem__(self, key):
+        """Return a subset of TilesGrid instance using numpy-like indexing.
+        
+        Notes
+        -----
+        - Steps are forbidden; only contiguous TilesGrids can be created
+        - Negative steps are forbidden
+        
+        """
+        # Coerce key to list
+        try:
+            key = list(key)
+        except TypeError:
+            key = [key]
+        
+        # Freeze slice indices to shape of tiles array
+        key_ = []
+        for sl, nd in itertools.izip_longest(key, self.tiles.shape,
+                                             fillvalue=slice(None)):
+            try: # assume slice
+                start, stop, step = sl.indices(nd)
+            except AttributeError: # coerce indices to slice
+                if sl is None:
+                    start, stop, step = slice(None).indices(nd)
+                else: # single element indexing
+                   start, stop, step = slice(sl, sl+1).indices(nd)
+            
+            if not step == 1:
+                raise ValueError("TilesGrid must be contiguous, slice step must be 1")
+            
+            key_.append(slice(start, stop))
+         
+        # Extend slice stops by 1 for edges array
+        ekey = [slice(sl.start, sl.stop+1) if sl.stop - sl.start
+                else slice(sl.start, sl.stop) # dont create edges where no tiles
+                for sl in key_]
+        
+        return type(self)(self.tiles[key_], self.edges[ekey], validate=False)
+        # bounds = edges[0,0,0], edges[-1,-1,-1]
+
     @classmethod
     def from_splitlocs(cls, pcs, splitlocs):
         """Construct `TilesGrid` instance by retiling pointclouds.
@@ -58,7 +98,7 @@ class TilesGrid(object):
             dlocs: list
                 locations along specified axis at which to split
                 (see docs for `simulocloud.pointcloud.PointCloud.split`)
-
+        
             dimensions can be omitted, resulting in no splitting in that
             dimension
         
@@ -89,7 +129,7 @@ class TilesGrid(object):
         edges = make_edges_grid(pcs_bounds, splitlocs)
         
         return cls(tiles, edges, validate=False)
-    
+
     @property
     def bounds(self):
         """The bounds of the entire grid of tiles."""
