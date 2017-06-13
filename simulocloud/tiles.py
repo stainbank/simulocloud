@@ -1,5 +1,5 @@
 """
-tile
+tiles
 """
 import numpy as np
 import itertools
@@ -7,9 +7,9 @@ import simulocloud.pointcloud
 import simulocloud.exceptions
 
 class Tile(simulocloud.pointcloud.PointCloud):
-    """An immmutable pointcloud"""
+    """An immmutable pointcloud."""
     def __init__(self, xyz, header=None):
-        """."""
+        """See documentation for `simulocloud.pointcloud.Pointcloud`."""
         super(Tile, self).__init__(xyz, header)
         self._arr.flags.writeable = False
     
@@ -23,19 +23,49 @@ class Tile(simulocloud.pointcloud.PointCloud):
         raise simulocloud.exceptions.TileException("Tile pointcloud cannot be modified")
 
 class TilesGrid(object):
-    """Container for tiles grid."""
+    """Container for grid of tiles described spatially by edges grid.
+    
+    Attributes
+    ----------
+    tiles: `numpy.ndarray` (ndim=3, dtype=object)
+        spatially contiguous pointclouds (usually type `Tile`) gridded to a 3D
+        array ordered by sequence of intervals in x (0), y (1) and z (2)
+    edges: `numpy.ndarray` (ndim=4, dtype=float)
+        three 3D x, y and z coordinate arrays (i,j indexing) concatenated in
+        4th axis, defining intervals seperating elements in `tiles` such that:
+        - `edges[ix, iy, iz]` returns a point coordinate at the corner between
+          adjacent pointclouds `tiles[ix-1, iy-1, iz-1], tiles[ix, iy, iz]`
+        - the bounds produced by concatenation of `edges[ix, iy, iz]` and
+          `edges[ix+1, iy+1, iz+1]` (i.e. `grid[ix, iy, iz].bounds`)
+          are guaranteed to spatially contain (but not necessarily equal) those
+          of the pointcloud at `tiles[ix, iy, iz]`
+    bounds: `Bounds`
+        defined by the outermost coordinates of `edges`
+    
+    Subsetting
+    ----------
+    A `TilesGrid` can be sliced or indexed to produce a subset (i.e. another
+    `TilesGrid` instance), with the following restrictions:
+    - step size must be 1 (or None)
+    - negative steps (reverse slicing) is unsupported
+    
+    Subsetting produces views into, not copies of, the `tiles` and `edge` grid
+    arrays of the parent. This makes subsetting a light operation, but care
+    must be taken not to modify these attributes.
+    
+    """
     def __init__(self, tiles, edges, validate=True):
-        """Directly initialise `TilesGrid` from grids
+        """Directly initialise `TilesGrid` from grids.
         
         Arguments
         ---------
         tiles: `numpy.ndarray` (ndim=3, dtype=object)
-            3D array containing pointclouds (usually of type `Tile`) spatially
-            seperated by uniform edges ordered along array axes:
-                 0:x, 1:y, 2:z
+            3D array of ordered pointclouds produced by `retile`
         edges: `numpy.ndarray` (ndim=4, dtype=float)
-            three 3D x, y and z coordinate arrays concatenated in 4th axis
-            defining edges between (and around) `tiles`
+            4D array of shape (nx+1, ny+1, nz+1, 3) where nx, ny, nz = tiles.shape
+            usually produced by `make_edges`
+        
+        Instantiation by constructor classmethods is preferred.
         
         """
         self.tiles = tiles
@@ -115,6 +145,7 @@ class TilesGrid(object):
         `TilesGrid` instance
             internal edges defined by `splitlocs`, grid bounds equal to merged
             bounds of `pcs`
+        
         """
         # Sort splitlocs and determine their bounds
         mins, maxs = [],[]
@@ -134,13 +165,13 @@ class TilesGrid(object):
             raise ValueError("Split locations must be within total bounds of pointclouds")
         
         tiles = retile(pcs, splitlocs, pctype=Tile)
-        edges = make_edges_grid(pcs_bounds, splitlocs)
+        edges = make_edges(pcs_bounds, splitlocs)
         
         return cls(tiles, edges, validate=False)
 
     @property
     def bounds(self):
-        """The bounds of the entire grid of tiles."""
+        """Return the bounds containing the entire grid of tiles."""
         bounds = np.concatenate([self.edges[0,0,0], self.edges[-1,-1,-1]])
         return simulocloud.pointcloud.Bounds(*bounds)
 
@@ -183,7 +214,7 @@ def retile(pcs, splitlocs, pctype=Tile):
     
     Returns
     -------
-    tile_grid: `numpy.ndarray` (ndim=3, dtype=object)
+    tiles: `numpy.ndarray` (ndim=3, dtype=object)
         3D array containing pointclouds (of type `pctype`) resulting from the
         (collective) splitting of `pcs` in each dimension according to `dlocs`
         in `splitlocs`
@@ -199,7 +230,7 @@ def retile(pcs, splitlocs, pctype=Tile):
         splitlocs[d] = dlocs
     
     # Build 4D array with pcs split in x, y and z
-    tile_grid = np.empty([len(pcs)] + shape, dtype=object)
+    tiles = np.empty([len(pcs)] + shape, dtype=object)
     for i, pc in enumerate(pcs):
         pcs = pc.split('x', splitlocs['x'], pctype=pctype)
         for ix, pc in enumerate(pcs):
@@ -208,10 +239,10 @@ def retile(pcs, splitlocs, pctype=Tile):
                 pcs = pc.split('z', splitlocs['z'])
                 # Assign pc to predetermined location
                 for iz, pc in enumerate(pcs):
-                    tile_grid[i, ix, iy, iz] = pc
+                    tiles[i, ix, iy, iz] = pc
     
     # Flatten to 3D
-    return np.sum(tile_grid, axis=0)
+    return np.sum(tiles, axis=0)
 
 def fractional_splitlocs(bounds, nx=None, ny=None, nz=None):
     """Generate locations to split bounds into n even sections per axis.
@@ -242,7 +273,7 @@ def fractional_splitlocs(bounds, nx=None, ny=None, nz=None):
     
     return splitlocs
 
-def make_edges_grid(bounds, splitlocs):
+def make_edges(bounds, splitlocs):
     """Return coordinate array describing the edges between retiled pointclouds.
     
     Arguments
@@ -254,10 +285,10 @@ def make_edges_grid(bounds, splitlocs):
     
     Returns
     -------
-    edges_grid: `numpy.ndarray` (ndim=4, dtype=float)
+    edges: `numpy.ndarray` (ndim=4, dtype=float)
         4D array containing x, y and z coordinate arrays (see documentation for
         `numpy.meshgrid`), indexed by 'ij' and concatenated in 4th dimension
-        indices, such that `edges_grid[ix, iy, iz, :]` returns a single point
+        indices, such that `edges[ix, iy, iz, :]` returns a single point
         coordinate in the form `array([x, y, z])`
     
     Notes and Examples
@@ -270,11 +301,11 @@ def make_edges_grid(bounds, splitlocs):
       pointclouds `tiles[ix-1, iy-1, iz-1], tiles[ix, iy, iz]`
     - `edges[ix, iy, iz]` and `edges[ix+1, iy+1, iz+1]` combine to form a set
       of bounds which contain --- but are not (necessarily) equal to --- those
-      of the pointcloud at `tile_grid[ix, iy, iz]`
+      of the pointcloud at `tiles[ix, iy, iz]`
      
     >>> splitlocs = fractional_splitlocs(pc.bounds, nx=10, ny=8, nz=5)
     >>> tiles = retile(pc, splitlocs)
-    >>> edges = make_edges_grid(pc.bounds, splitlocs)
+    >>> edges = make_edges(pc.bounds, splitlocs)
     >>> print tiles.shape, edges.shape # +1 in each axis
     (10, 8, 5) (11, 9, 6, 3)
     >>> ix, iy, iz = 5, 3, 2

@@ -72,14 +72,14 @@ def test_pointcloud_retiling_obeys_splitlocs(splitlocs, grid):
                         except simulocloud.exceptions.EmptyPointCloud:
                             pass
 
-def test_shapes_of_edges_grid_and_tiles_grid_align(grid):
+def test_shapes_of_edges_and_tiles_grid_align(grid):
     """Does the edges array have one extra element per axis than the tile array?"""
     assert grid.edges.shape[3] == 3 # x,y,z
     for n_tile, n_bounds in zip(grid.tiles.shape, grid.edges.shape[:3]):
         assert n_bounds == n_tile+1
 
-def test_edges_grid_describes_bounds_of_tile_grid(grid):
-    """Does the grid returned by `make_edges_grid` describe that of `retile`?"""
+def test_edges_describes_bounds_of_tile_grid(grid):
+    """Does the grid returned by `make_edges` describe that of `retile`?"""
     for ix, iy, iz in itertools.product(*map(xrange, grid.tiles.shape)):
         # Ensure pointcloud bounds fall within edges
         tile = grid.tiles[ix, iy, iz]
@@ -91,7 +91,7 @@ def test_edges_grid_describes_bounds_of_tile_grid(grid):
                 assert compare(edge, bound)
 
 def test_TilesGrid_is_self_validating(grid):
-    """The result of this test should be identical to that of `test_edges_grid_describes_bounds_of_tile_grid`."""
+    """The result of this test should be identical to that of `test_edges_describes_bounds_of_tile_grid`."""
     assert grid and grid.validate()
     grid.edges *= 100
     assert not grid.validate()
@@ -120,7 +120,7 @@ def test_TilesGrid_initialisation_fails_if_invalid(pcs, splitlocs):
     tiles = simulocloud.tiles.retile(pcs, splitlocs)
     # Make splitlocs out of range
     badsplitlocs = {d: [loc*100 for loc in dlocs] for d, dlocs in splitlocs.iteritems()}
-    edges = simulocloud.tiles.make_edges_grid(bounds, badsplitlocs)
+    edges = simulocloud.tiles.make_edges(bounds, badsplitlocs)
     
     with pytest.raises(simulocloud.exceptions.TilesGridException):
         simulocloud.tiles.TilesGrid(tiles, edges)
