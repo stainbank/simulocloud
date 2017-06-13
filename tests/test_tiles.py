@@ -33,7 +33,7 @@ def grid(pcs, splitlocs):
 @pytest.fixture
 def half_indices(grid):
     """Tuple of ints specifying the halfway (rounding down) indices of grid tiles."""
-    return tuple((i//2 for i in grid.tiles.shape))
+    return tuple((i//2 for i in grid.shape))
 
 """ tests """
 def test_tile_array_is_immutable(tile):
@@ -92,7 +92,7 @@ def test_edges_grid_describes_bounds_of_tile_grid(grid):
 
 def test_TilesGrid_is_self_validating(grid):
     """The result of this test should be identical to that of `test_edges_grid_describes_bounds_of_tile_grid`."""
-    assert grid.tiles.size and grid.validate()
+    assert grid and grid.validate()
     grid.edges *= 100
     assert not grid.validate()
 
@@ -100,7 +100,7 @@ def test_TilesGrid_is_subsettable(grid, half_indices):
     """Does a `TilesGrid` return a subset of itself when indexed?."""
     ix, iy, iz = half_indices
     subset = grid[ix:, iy:, iz:]
-    assert subset.tiles.size and subset.validate()
+    assert subset and subset.validate()
 
 def test_TilesGrid_subset_with_integers_has_arrays(grid, half_indices):
     """Are full sized tile and edge arrays produced by integer subsetting?."""
@@ -112,7 +112,7 @@ def test_subsetting_to_empty_is_reasonable(grid):
     """Are both tiles and edges empty when subsetting TilesGrid to empty?"""
     ix, iy, iz = grid.tiles.shape
     subset = grid[ix:, iy:, iz:]
-    assert (not subset.tiles.size) and (not subset.edges.size)
+    assert (not subset) and (not subset.edges.size)
 
 def test_TilesGrid_initialisation_fails_if_invalid(pcs, splitlocs):
     """Is a `TilesGridException` raised when trying to create a `TilesGrid` instance with edges which incorrectly describe tiles?."""

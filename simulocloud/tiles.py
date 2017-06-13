@@ -85,6 +85,14 @@ class TilesGrid(object):
         return type(self)(self.tiles[key_], self.edges[ekey], validate=False)
         # bounds = edges[0,0,0], edges[-1,-1,-1]
 
+    def __len__(self):
+        """Return the number of elements in tiles grid."""
+        return self.tiles.size
+
+    def __nonzero__(self):
+        """Return True if there are any tiles."""
+        return bool(len(self))
+
     @classmethod
     def from_splitlocs(cls, pcs, splitlocs):
         """Construct `TilesGrid` instance by retiling pointclouds.
@@ -136,6 +144,11 @@ class TilesGrid(object):
         bounds = np.concatenate([self.edges[0,0,0], self.edges[-1,-1,-1]])
         return simulocloud.pointcloud.Bounds(*bounds)
 
+    @property
+    def shape(self):
+        """Return the shape of the grid of tiles."""
+        return self.tiles.shape
+    
     def validate(self):
         """Return True if grid edges accurately describes tiles."""
         for ix, iy, iz in itertools.product(*map(xrange, self.tiles.shape)):
