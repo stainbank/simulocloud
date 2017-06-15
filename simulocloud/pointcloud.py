@@ -519,14 +519,14 @@ def points_out_of_bounds(pc, bounds):
 def _inside_bounds(A, B):
     """Return True if bounds `A` fits entirely inside bounds `B`"""
     for d in 'xyz':
-        minA, maxA = _get_dimension_bounds(A, d)
-        minB, maxB = _get_dimension_bounds(B, d)
+        minA, maxA = dim_bounds(A, d)
+        minB, maxB = dim_bounds(B, d)
         if (minA <= minB) or (maxA >= maxB):
             return False
 
     return True
 
-def _get_dimension_bounds(pc, d):
+def dim_bounds(pc, d):
     """Return the (min, max) of dimension `d` in bounds of `PointCloud` (or `Bounds`) `pc`."""
     try:
         bounds = pc.bounds

@@ -267,7 +267,7 @@ def fractional_splitlocs(bounds, nx=None, ny=None, nz=None):
     # Build splitlocs
     splitlocs = {}
     for d, nd in nsplits.iteritems():
-        mind, maxd = simulocloud.pointcloud._get_dimension_bounds(bounds, d)
+        mind, maxd = simulocloud.pointcloud.dim_bounds(bounds, d)
         splitlocs[d] = np.linspace(mind, maxd, num=nd,
                                    endpoint=False)[1:] # "inside" edges only
     
@@ -330,7 +330,7 @@ def make_edges(bounds, splitlocs):
     edges = []
     for d in 'xyz':
         d_edges = []
-        mind, maxd = simulocloud.pointcloud._get_dimension_bounds(bounds, d)
+        mind, maxd = simulocloud.pointcloud.dim_bounds(bounds, d)
         dlocs = np.array(splitlocs.setdefault(d, np.array([])))
         edges.append(np.concatenate([[mind], dlocs, [maxd]]))
     

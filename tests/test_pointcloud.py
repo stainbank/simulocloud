@@ -89,7 +89,7 @@ def overlap_pcs(pcs, overlap, nx=None, ny=None, nz=None):
     
     overlapping = []
     for d, n in nsplits.iteritems():
-        mind, maxd = simulocloud.pointcloud._get_dimension_bounds(bounds, d)
+        mind, maxd = simulocloud.pointcloud.dim_bounds(bounds, d)
         edges, step = np.linspace(mind, maxd, num=n+1,
                                   endpoint=True, retstep=True)
         offset = overlap * step/2
@@ -288,7 +288,7 @@ def test_pointcloud_split_along_dlocs(pc_las, axis):
     at least one point between each (1m) interval --- otherwise error
     """
     # Split pointcloud at integer intervals
-    mind, maxd = simulocloud.pointcloud._get_dimension_bounds(pc_las, axis)
+    mind, maxd = simulocloud.pointcloud.dim_bounds(pc_las, axis)
     dlocs = range(*(int(math.ceil(dbound)) for dbound in (mind, maxd)))
     pcs = pc_las.split(axis, dlocs)
     
@@ -296,5 +296,5 @@ def test_pointcloud_split_along_dlocs(pc_las, axis):
     splitbounds = zip([mind] + dlocs, #upper
                       dlocs + [maxd]) #lower
     for pc, (mind_split, maxd_split) in zip(pcs, splitbounds):
-        mind, maxd = simulocloud.pointcloud._get_dimension_bounds(pc, axis)
+        mind, maxd = simulocloud.pointcloud.dim_bounds(pc, axis)
         assert mind >= mind_split and maxd <= maxd_split
