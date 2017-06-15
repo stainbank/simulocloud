@@ -57,18 +57,18 @@ def test_pointcloud_retiling_preserves_points(pc_las, splitlocs):
 
 def test_pointcloud_retiling_obeys_splitlocs(splitlocs, grid):
     """Does `retile` split overlapping pointclouds along the specified locations?"""
-    # Test that tiles are within bounds in each dimension
-    for axis, d in enumerate('xyz'):
-        for pcs_2d in np.swapaxes(grid.tiles, 2, axis): #iterate through axis last
+    # Test that tiles are within bounds in each axis
+    for i, axis in enumerate('xyz'):
+        for pcs_2d in np.swapaxes(grid.tiles, 2, i): #iterate through axis last
             for pcs in pcs_2d:
-                for i, dloc in enumerate(splitlocs[d]):
+                for j, loc in enumerate(splitlocs[axis]):
                     # Check split location divides adjacent pointclouds
-                    for pc, b, compare in zip(pcs[i:i+2],
+                    for pc, b, compare in zip(pcs[j:j+2],
                                              ('max', 'min'),
                                              (np.less, np.greater_equal)):
                         try:
-                            bound = getattr(pc.bounds, b+d)
-                            assert compare(bound, dloc)
+                            bound = getattr(pc.bounds, b+axis)
+                            assert compare(bound, loc)
                         except simulocloud.exceptions.EmptyPointCloud:
                             pass
 
@@ -119,7 +119,7 @@ def test_TilesGrid_initialisation_fails_if_invalid(pcs, splitlocs):
     bounds = simulocloud.pointcloud.merge_bounds(pc.bounds for pc in pcs)
     tiles = simulocloud.tiles.retile(pcs, splitlocs)
     # Make splitlocs out of range
-    badsplitlocs = {d: [loc*100 for loc in dlocs] for d, dlocs in splitlocs.iteritems()}
+    badsplitlocs = {axis: [loc*100 for loc in locs] for axis, locs in splitlocs.iteritems()}
     edges = simulocloud.tiles.make_edges(bounds, badsplitlocs)
     
     with pytest.raises(simulocloud.exceptions.TilesGridException):

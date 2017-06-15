@@ -84,13 +84,13 @@ def overlap_pcs(pcs, overlap, nx=None, ny=None, nz=None):
         new pointclouds with overlapping bounds due to sharing of points
     
     """
-    nsplits = {d: n for d, n in zip('xyz', (nx, ny, nz)) if n is not None}
+    nsplits = {axis: n for axis, n in zip('xyz', (nx, ny, nz)) if n is not None}
     bounds = simulocloud.pointcloud.merge_bounds(pc.bounds for pc in pcs)
     
     overlapping = []
-    for d, n in nsplits.iteritems():
-        mind, maxd = simulocloud.pointcloud.dim_bounds(bounds, d)
-        edges, step = np.linspace(mind, maxd, num=n+1,
+    for axis, n in nsplits.iteritems():
+        min_, max_ = simulocloud.pointcloud.axis_bounds(bounds, axis)
+        edges, step = np.linspace(min_, max_, num=n+1,
                                   endpoint=True, retstep=True)
         offset = overlap * step/2
         lbounds, ubounds = (edges - offset)[:-1], (edges + offset)[1:]
@@ -98,8 +98,8 @@ def overlap_pcs(pcs, overlap, nx=None, ny=None, nz=None):
         for pc in pcs:
             for lbound, ubound in zip(lbounds, ubounds):
                 overlapping.append(pc.crop(none_bounds()._replace(
-                                             **{'min'+d: lbound,
-                                                'max'+d: ubound }),
+                                             **{'min'+axis: lbound,
+                                                'max'+axis: ubound }),
                                            allow_empty=True))
         pcs = overlapping[:]
     
@@ -179,48 +179,48 @@ def test_PointCloud_addition_values(pc_arr, pc_arr_x10):
     # Mins from small, maxs from big
     assert (pc.bounds[:3] == pc_arr.bounds[:3]) and (pc.bounds[3:] == pc_arr_x10.bounds[3:])
 
-@pytest.mark.parametrize('i,dim', [(0, 'x'), (1, 'y'), (2,'z')])
-def test_dim_attributes_are_accurate(input_array, pc_arr, i, dim):
-    """Do the x, y and z attributes retrieve the dimension array correctly?"""
-    assert np.allclose(getattr(pc_arr, dim), input_array[i])
+@pytest.mark.parametrize('i,axis', [(0, 'x'), (1, 'y'), (2,'z')])
+def test_axis_attributes_are_accurate(input_array, pc_arr, i, axis):
+    """Do the x, y and z attributes retrieve the array containing the relevant component of point coordinates?"""
+    assert np.allclose(getattr(pc_arr, axis), input_array[i])
 
 def test_cropping_with_none_bounds(pc_arr, none_bounds):
     """Does no PointCloud cropping occur when bounds of None are used?"""
     assert np.allclose(pc_arr.crop(none_bounds).arr, pc_arr.arr)
 
-@pytest.mark.parametrize('d', ('x', 'y', 'z'))
-def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, d):
+@pytest.mark.parametrize('axis', ('x', 'y', 'z'))
+def test_cropping_is_lower_bounds_inclusive(pc_arr, none_bounds, axis):
     """Does PointCloud cropping preserve values at lower bounds?"""
     # Ensure a unique point used as minimum bound
-    sorted_points = np.sort(pc_arr.points, order=[d])
-    for i, mind in enumerate(sorted_points[d]):
+    sorted_points = np.sort(pc_arr.points, order=[axis])
+    for i, min_ in enumerate(sorted_points[axis]):
         if i < 1: continue # at least one point must be out of bounds
-        if mind != sorted_points[i-1][d]: 
+        if min_ != sorted_points[i-1][axis]:
             lowest_point = sorted_points[i]
             break
     
-    # Apply lower bound cropping to a single dimension
-    bounds = none_bounds._replace(**{'min'+d: mind})
+    # Apply lower bound cropping to a single axis
+    bounds = none_bounds._replace(**{'min'+axis: min_})
     pc_cropped = pc_arr.crop(bounds)
     
-    assert np.sort(pc_cropped.points, order=d)[0] == lowest_point
+    assert np.sort(pc_cropped.points, order=axis)[0] == lowest_point
 
-@pytest.mark.parametrize('d', ('x', 'y', 'z'))
-def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, d):
+@pytest.mark.parametrize('axis', ('x', 'y', 'z'))
+def test_cropping_is_upper_bounds_exclusive(pc_arr, none_bounds, axis):
     """Does PointCloud cropping omit values at upper bounds?"""
     # Ensure a unique point used as maximum bound
-    rev_sorted_points = np.sort(pc_arr.points, order=[d])[::-1]
-    for i, maxd in enumerate(rev_sorted_points[d]):
-        if maxd != rev_sorted_points[i+1][d]:
+    rev_sorted_points = np.sort(pc_arr.points, order=[axis])[::-1]
+    for i, max_ in enumerate(rev_sorted_points[axis]):
+        if max_ != rev_sorted_points[i+1][axis]:
             oob_point = rev_sorted_points[i]
             highest_point = rev_sorted_points[i+1]
             break
-    # Apply upper bound cropping to a single dimension
+    # Apply upper bound cropping to a single axis
 
-    bounds = none_bounds._replace(**{'max'+d: maxd})
+    bounds = none_bounds._replace(**{'max'+axis: max_})
     pc_cropped = pc_arr.crop(bounds)
     
-    assert (np.sort(pc_cropped.points, order=d)[-1] == highest_point) and (
+    assert (np.sort(pc_cropped.points, order=axis)[-1] == highest_point) and (
            oob_point not in pc_cropped.points)
 
 def test_cropping_to_nothing_raises_exception_when_specified(pc_arr, inf_bounds):
@@ -281,20 +281,20 @@ def test_pointclouds_merged_by_method(pc_las, fdir='ALS_tiles'):
     assert same_len_and_bounds(merged, pc_las)
 
 @pytest.mark.parametrize('axis', ('x', 'y', 'z'))
-def test_pointcloud_split_along_dlocs(pc_las, axis):
+def test_pointcloud_split_along_locs(pc_las, axis):
     """Is a pointcloud split to be between split locations?
 
     Assumes points distributed densely throughout range so that that there is
     at least one point between each (1m) interval --- otherwise error
     """
     # Split pointcloud at integer intervals
-    mind, maxd = simulocloud.pointcloud.dim_bounds(pc_las, axis)
-    dlocs = range(*(int(math.ceil(dbound)) for dbound in (mind, maxd)))
-    pcs = pc_las.split(axis, dlocs)
+    min_, max_ = simulocloud.pointcloud.axis_bounds(pc_las, axis)
+    locs = range(*(int(math.ceil(bound)) for bound in (min_, max_)))
+    pcs = pc_las.split(axis, locs)
     
     # Check points fall between split locations
-    splitbounds = zip([mind] + dlocs, #upper
-                      dlocs + [maxd]) #lower
-    for pc, (mind_split, maxd_split) in zip(pcs, splitbounds):
-        mind, maxd = simulocloud.pointcloud.dim_bounds(pc, axis)
-        assert mind >= mind_split and maxd <= maxd_split
+    splitbounds = zip([min_] + locs, #upper
+                      locs + [max_]) #lower
+    for pc, (min_split, max_split) in zip(pcs, splitbounds):
+        min_, max_ = simulocloud.pointcloud.axis_bounds(pc, axis)
+        assert min_ >= min_split and max_ <= max_split

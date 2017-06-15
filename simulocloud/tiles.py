@@ -130,15 +130,15 @@ class TilesGrid(object):
         Arguments
         ---------
         pcs: seq of `simulocloud.pointcloud.Pointcloud`
-        splitlocs: dict {d: dlocs, ...}, where:
-            d: str
-                'x', 'y' and/or 'z' dimension
-            dlocs: list
+        splitlocs: dict {axis: locs, ...}, where:
+            axis: str
+                'x', 'y' and/or 'z'
+            locs: list
                 locations along specified axis at which to split
                 (see docs for `simulocloud.pointcloud.PointCloud.split`)
         
-            dimensions can be omitted, resulting in no splitting in that
-            dimension
+            axes can be omitted, resulting in no splitting in that
+            axis
         
         Returns
         -------
@@ -149,14 +149,14 @@ class TilesGrid(object):
         """
         # Sort splitlocs and determine their bounds
         mins, maxs = [],[]
-        for d in 'xyz':
-            dlocs = sorted(splitlocs.get(d, []))
+        for axis in 'xyz':
+            locs = sorted(splitlocs.get(axis, []))
             try:
-                mind, maxd = dlocs[0], dlocs[-1]
+                min_, max_ = locs[0], locs[-1]
             except IndexError:
-                mind, maxd = np.inf, -np.inf # always within another bounds
-            splitlocs[d] = dlocs
-            mins.append(mind), maxs.append(maxd)
+                min_, max_ = np.inf, -np.inf # always within another bounds
+            splitlocs[axis] = locs
+            mins.append(min_), maxs.append(max_)
         
         # Ensure grid will be valid
         splitloc_bounds = simulocloud.pointcloud.Bounds(*(mins + maxs))
@@ -196,19 +196,19 @@ class TilesGrid(object):
         return True
 
 def retile(pcs, splitlocs, pctype=Tile):
-    """Return a 3D grid of (merged) pointclouds split in x, y and z dimensions.
+    """Return a 3D grid of (merged) pointclouds split along x, y and z axes.
     
     Arguments
     ---------
     pcs: seq of `simulocloud.pointcloud.PointCloud`
     splitlocs: dict
-        {d: dlocs, ...}, where:
-            d: str
-                'x', 'y' and/or 'z' dimension
-            dlocs: list
+        {axis: locs, ...}, where:
+            axis: str
+                'x', 'y' and/or 'z'
+            locs: list
                 locations along specified axis at which to split
                 (see docs for `PointCloud.split`)
-        dimensions can be omitted, resulting in no splitting in that dimension
+        axes can be omitted, resulting in no splitting in that axis
     pctype: subclass of `simulocloud.pointcloud.PointCloud`
        type of pointclouds to return (`simulocloud.pointcloud.PointCloud`)
     
@@ -216,18 +216,18 @@ def retile(pcs, splitlocs, pctype=Tile):
     -------
     tiles: `numpy.ndarray` (ndim=3, dtype=object)
         3D array containing pointclouds (of type `pctype`) resulting from the
-        (collective) splitting of `pcs` in each dimension according to `dlocs`
+        (collective) splitting of `pcs` in each axis according to `locs`
         in `splitlocs`
-        sorted `dlocs` align with sequential pointclouds along each array axis:
+        sorted `locs` align with sequential pointclouds along each array axis:
             0:x, 1:y, 2:z
     
     """
     shape = [] #nx, ny, nz
-    for d in 'x', 'y', 'z':
-        dlocs = sorted(splitlocs.setdefault(d, []))
-        shape.append(len(dlocs) + 1) #i.e. n pointclouds created by split
+    for axis in 'x', 'y', 'z':
+        locs = sorted(splitlocs.setdefault(axis, []))
+        shape.append(len(locs) + 1) #i.e. n pointclouds created by split
         #! Should assert splitlocs within bounds of pcs
-        splitlocs[d] = dlocs
+        splitlocs[axis] = locs
     
     # Build 4D array with pcs split in x, y and z
     tiles = np.empty([len(pcs)] + shape, dtype=object)
@@ -257,18 +257,18 @@ def fractional_splitlocs(bounds, nx=None, ny=None, nz=None):
     
     Returns
     -------
-    splitlocs: dict ({d: dlocs, ...)}
-        lists of locations for each dimension d (i.e. 'x', 'y', 'z')
-        len(dlocs) = nd-1; omitted if nd=None
+    splitlocs: dict ({axis: locs, ...)}
+        lists of locations for each axis (i.e. 'x', 'y', 'z')
+        len(locs) = n-1; omitted if n=None
      
     """
     bounds = simulocloud.pointcloud.Bounds(*bounds) #should be a strict bounds (min<max, etc)
-    nsplits = {d: n for d, n in zip('xyz', (nx, ny, nz)) if n is not None}
+    nsplits = {axis: n for axis, n in zip('xyz', (nx, ny, nz)) if n is not None}
     # Build splitlocs
     splitlocs = {}
-    for d, nd in nsplits.iteritems():
-        mind, maxd = simulocloud.pointcloud.dim_bounds(bounds, d)
-        splitlocs[d] = np.linspace(mind, maxd, num=nd,
+    for axis, n in nsplits.iteritems():
+        min_, max_ = simulocloud.pointcloud.axis_bounds(bounds, axis)
+        splitlocs[axis] = np.linspace(min_, max_, num=n,
                                    endpoint=False)[1:] # "inside" edges only
     
     return splitlocs
@@ -280,7 +280,7 @@ def make_edges(bounds, splitlocs):
     ---------
     bounds: `simulocloud.pointcloud.Bounds` or similiar
        (minx, miny, minz, maxx, maxy, maxz) bounds of entire grid
-    splitlocs: dict {d: dlocs, ...}
+    splitlocs: dict {axis: locs, ...}
         same as argument to `retile`
     
     Returns
@@ -326,13 +326,13 @@ def make_edges(bounds, splitlocs):
     """
     #! Should fail if splitlocs is not within bounds
     
-    # Determine bounds for each tile in each dimension
+    # Determine bounds for each tile in each axis
     edges = []
-    for d in 'xyz':
-        d_edges = []
-        mind, maxd = simulocloud.pointcloud.dim_bounds(bounds, d)
-        dlocs = np.array(splitlocs.setdefault(d, np.array([])))
-        edges.append(np.concatenate([[mind], dlocs, [maxd]]))
+    for axis in 'xyz':
+        axis_edges = []
+        min_, max_ = simulocloud.pointcloud.axis_bounds(bounds, axis)
+        locs = np.array(splitlocs.setdefault(axis, np.array([])))
+        edges.append(np.concatenate([[min_], locs, [max_]]))
     
     # Grid edge coordinates
     grids = np.meshgrid(*edges, indexing='ij')

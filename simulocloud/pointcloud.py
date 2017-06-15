@@ -159,17 +159,17 @@ class PointCloud(object):
     
     @property
     def x(self):
-        """The x dimension of point coordinates."""
+        """The x component of point coordinates."""
         return self._arr[0]
 
     @property
     def y(self):
-        """The y dimension of point coordinates."""
+        """The y component of point coordinates."""
         return self._arr[1]
 
     @property
     def z(self):
-        """The z dimension of point coordinates."""
+        """The z component of point coordinates."""
         return self._arr[2]
 
     @property
@@ -319,14 +319,14 @@ class PointCloud(object):
         pointclouds = [self] + [pc for pc in pointclouds]
         return merge(pointclouds, pctype=type(self))
 
-    def split(self, axis, dlocs, pctype=None, allow_empty=True):
+    def split(self, axis, locs, pctype=None, allow_empty=True):
         """Split this pointcloud at specified locations along axis.
         
         Arguments
         ---------
         axis: str
             point coordinate component ('x', 'y', or 'z') to split along
-        dlocs: iterable of float
+        locs: iterable of float
             points along `axis` at which to split pointcloud
         pctype: subclass of `PointCloud`
            type of pointclouds to return
@@ -338,7 +338,7 @@ class PointCloud(object):
         -------
         pcs: list of `pctype` (PointCloud) instances
             pointclouds with `axis` bounds defined sequentially (low -> high)
-            by self.bounds and dlocs
+            by self.bounds and locs
         """
         # Copy pointcloud
         if pctype is None:
@@ -349,7 +349,7 @@ class PointCloud(object):
         none_bounds = Bounds(*(None,)*6)
         pcs = [pc.crop(none_bounds._replace(**{'min'+axis: loc}),
                        destructive=True, allow_empty=allow_empty)
-                  for loc in sorted(dlocs)[::-1]]
+                  for loc in sorted(locs)[::-1]]
         pcs.append(pc)
         
         return pcs[::-1]
@@ -406,7 +406,7 @@ class InfBounds(Bounds):
         Args
         ----
         minx, miny, minz, maxx, maxy, maxz: numeric or None
-            minimum or maximum bounds in each dimension
+            minimum or maximum bounds in each axis
             None will be coerced to -numpy.inf (mins) or numpy.inf (maxes)
         
         """
@@ -414,8 +414,8 @@ class InfBounds(Bounds):
         kwargs = locals()
         for b, inf in zip(('min', 'max'),
                           (-np.inf, np.inf)):
-            for dim in 'xyz':
-                bound = b + dim
+            for axis in 'xyz':
+                bound = b + axis
                 value = kwargs[bound]
                 kwargs[bound] = inf if value is None else float(value)
         
@@ -479,7 +479,7 @@ def _iter_points_out_of_bounds(pc, bounds):
     generator (len 6)
         yields, for each bound of lower, upper of x, y, z, not equal to `None`,
         a boolean numpy.ndarray describing whether each point falls outside of
-        that bound in that dimension
+        that bound in that axis
     
     Notes
     -----
@@ -489,11 +489,11 @@ def _iter_points_out_of_bounds(pc, bounds):
     Comparisons to `None` are skipped (generator will be empty if all bounds
     are `None`)
     """
-    for i, dim in enumerate(pc.arr):
+    for i, axis_coords in enumerate(pc.arr):
         for compare, bound in zip((np.less, np.greater_equal),
                                   (bounds[i], bounds[i+3])):
             if bound is not None:
-                yield compare(dim, bound)
+                yield compare(axis_coords, bound)
 
 def points_out_of_bounds(pc, bounds):
     """ Determine whether each point in pc is out of bounds
@@ -507,8 +507,8 @@ def points_out_of_bounds(pc, bounds):
     Returns
     -------
     `numpy.ndarray` (shape=(len(pc),))
-        bools specifying whether any of the (x, y, z) dimensions of points
-        in `pc` are outside of the specified `bounds`
+        bools specifying whether any of the (x, y, z) component of point
+        coordinates in `pc` are outside of the specified `bounds`
     
     """
     oob = np.zeros(len(pc), dtype=bool)
@@ -518,22 +518,22 @@ def points_out_of_bounds(pc, bounds):
 
 def _inside_bounds(A, B):
     """Return True if bounds `A` fits entirely inside bounds `B`"""
-    for d in 'xyz':
-        minA, maxA = dim_bounds(A, d)
-        minB, maxB = dim_bounds(B, d)
+    for axis in 'xyz':
+        minA, maxA = axis_bounds(A, axis)
+        minB, maxB = axis_bounds(B, axis)
         if (minA <= minB) or (maxA >= maxB):
             return False
 
     return True
 
-def dim_bounds(pc, d):
-    """Return the (min, max) of dimension `d` in bounds of `PointCloud` (or `Bounds`) `pc`."""
+def axis_bounds(pc, axis):
+    """Return (min, max) of `axis` in bounds of `PointCloud` (or `Bounds`) `pc`."""
     try:
         bounds = pc.bounds
     except AttributeError:
         bounds = pc
     
-    return tuple([getattr(bounds, b + d) for b in ('min', 'max')])
+    return tuple([getattr(bounds, b + axis) for b in ('min', 'max')])
 
 def merge_bounds(ibounds):
     """Find overall bounds of pcs (or bounds).
@@ -552,7 +552,7 @@ def merge_bounds(ibounds):
     # Coerce Nones to Infs
     all_bounds = [InfBounds(*bounds) for bounds in ibounds]
     
-    # Extract mins/maxs of dimensions
+    # Extract mins/maxs of axes
     all_bounds = np.array(all_bounds)
     return Bounds(all_bounds[:,0].min(), all_bounds[:,1].min(), all_bounds[:,2].min(),
                   all_bounds[:,3].max(), all_bounds[:,4].max(), all_bounds[:,5].max())
