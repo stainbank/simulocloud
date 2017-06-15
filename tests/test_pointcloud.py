@@ -269,13 +269,15 @@ def test_PointCloud_can_downsample(pc_las):
     assert len(pc) == n and len(np.intersect1d(pc_las.points, np.unique(pc.points))) == len(pc.points)
 
 def test_pointclouds_merged_by_function(pc_las, fdir='ALS_tiles'):
+    """Does the merge function preserve the input points?"""
     pcs = [simulocloud.pointcloud.PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
-    merged = simulocloud.pointcloud.merge(simulocloud.pointcloud.PointCloud, *pcs)
+    merged = simulocloud.pointcloud.merge(pcs)
     assert same_len_and_bounds(merged, pc_las)
 
 def test_pointclouds_merged_by_method(pc_las, fdir='ALS_tiles'):
+    """Does the merge method preserve the input points?"""
     pcs = [simulocloud.pointcloud.PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
-    merged = pcs.pop().merge(*pcs)
+    merged = pcs.pop().merge(pcs)
     assert same_len_and_bounds(merged, pc_las)
 
 @pytest.mark.parametrize('axis', ('x', 'y', 'z'))

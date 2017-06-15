@@ -308,15 +308,16 @@ class PointCloud(object):
         return type(self)(self._arr[:, idx])
 
 
-    def merge(self, *pointclouds):
+    def merge(self, pointclouds):
         """Merge this pointcloud with other instances.
         
         Arguments
         ---------
-        *pointclouds: `PointCloud` instances
+        pointclouds: sequence of `PointCloud`
         
         """
-        return merge(type(self), self, *pointclouds)
+        pointclouds = [self] + [pc for pc in pointclouds]
+        return merge(pointclouds, pctype=type(self))
 
     def split(self, axis, dlocs, pctype=None, allow_empty=True):
         """Split this pointcloud at specified locations along axis.
@@ -558,13 +559,19 @@ def merge_bounds(ibounds):
 
 """PointCloud manipulation"""
 
-def merge(pctype, *pointclouds):
-    """Return an instance of `pctype` containing merged `pointclouds`.
+def merge(pointclouds, pctype=PointCloud):
+    """Return `pointclouds` merged to a single instance of `pctype`.
     
     Arguments
     ---------
-    pctype: `PointCloud` class (or subclass)
-    *pointclouds: instances of `PointCloud` (or subclass)
+    pointclouds: sequence of `PointCloud` (or subclass)
+    pctype: type of pointcloud to return (default=`PointCloud`)
+    
+    Returns
+    -------
+    instance of `pctype`
+        contains all points in `pointclouds`
+    
     """
     sizes = [len(pc) for pc in pointclouds]
     arr = np.empty((3, sum(sizes)), dtype=_DTYPE)
