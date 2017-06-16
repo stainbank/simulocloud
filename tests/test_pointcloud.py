@@ -36,11 +36,6 @@ def pc_arr_x10(pc_arr):
     return simulocloud.pointcloud.PointCloud((pc_arr.arr*10))
 
 @pytest.fixture
-def pc_multilas(fdir='ALS_tiles'):
-    """Set up a PointCloud instance using multiple file test data, tiled from pc_las."""
-    return simulocloud.pointcloud.PointCloud.from_las(*get_fpaths(fdir))
-
-@pytest.fixture
 def none_bounds():
     """A Bounds nametuple with all bounds set to None."""
     return simulocloud.pointcloud.Bounds(*(None,)*6)
@@ -49,6 +44,15 @@ def none_bounds():
 def inf_bounds():
     """A Bounds namedtuple with all bounds set to inf/-inf."""
     return simulocloud.pointcloud.Bounds(*(np.inf,)*3 + (np.inf,)*3)
+
+@pytest.fixture
+def half_bounds(pc_las):
+    """The bounds defining the central square covering half the area of `pc_las`."""
+    minx, miny, _, maxx, maxy, _ = pc_las.bounds
+    xint = (maxx - minx)/4.
+    yint = (maxy - miny)/4.
+    return simulocloud.pointcloud.Bounds(minx+xint, miny+yint, None,
+                                         maxx-yint, maxy-yint, None)
 
 """ Helper functions """
 def abspath(fname, fdir='data'):
@@ -115,16 +119,15 @@ def test_PointCloud_read_from_single_las(pc_las, expected_las_arr):
     """Can PointCloud be constructed from a single .las file?"""
     assert np.allclose(pc_las.arr, expected_las_arr)
 
-def test_PointCloud_from_multiple_las(pc_multilas, pc_las):
+def test_PointCloud_from_multiple_las(pc_las, fdir='ALS_tiles'):
     """Can PointCloud be constructed from multiple .las files?"""
-    assert len(pc_multilas) == len(pc_las)
+    pc = simulocloud.pointcloud.PointCloud.from_las(*get_fpaths(fdir))
+    assert same_len_and_bounds(pc, pc_las)
 
-def test_PointCloud_from_tiles(fpath='data/ALS.las', fdir='ALS_tiles'):
-    """Can a specific-area PointCloud be constructed from multiple .las files?"""
-    bounds = simulocloud.pointcloud.Bounds(90, 20, None, 100, 30, None)
-    cropped = simulocloud.pointcloud.PointCloud.from_las(fpath).crop(bounds)
-    tiled = simulocloud.pointcloud.PointCloud.from_tiles(bounds, *get_fpaths(fdir))
-    assert (len(cropped) == len(tiled)) and (cropped.bounds == tiled.bounds)
+def test_PointCloud_from_multiple_las_with_bounds(pc_las, half_bounds, fdir='ALS_tiles'):
+    """Is a `PointCloud` constructed with the argument `bounds` cropped to those bounds?"""
+    pc = simulocloud.pointcloud.PointCloud.from_las(*get_fpaths(fdir), bounds=half_bounds)
+    assert same_len_and_bounds(pc, pc_las.crop(half_bounds))
 
 def test_empty_PointCloud():
     """Is the PointCloud generated from `None` empty?"""

@@ -83,36 +83,43 @@ class PointCloud(object):
     """ Constructor methods """
  
     @classmethod
-    def from_las(cls, *fpaths):
+    def from_las(cls, *fpaths, **kwargs):
         """Initialise PointCloud from one or more .las files.
     
         Arguments
         ---------
-        fpaths: str
+        *fpaths: str
             filepaths of .las file containing 3D point coordinates
-       
-        """
-        if len(fpaths) > 1:
-           return cls(_combine_las(*fpaths))
-        else:
-            return cls(_get_las_xyz(fpaths[0]))
-
-    @classmethod
-    def from_tiles(cls, bounds, *fpaths):
-        """Initialise PointCloud conforming to bounds from one or more .las files.
-
-        Arguments
-        ---------
-        bounds: tuple or `Bounds`
-            (minx, miny, minz, maxx, maxy, maxz) bounds of tile
-        fpaths: str
-            filepaths of .las file containing 3D point coordinates
+        bounds: `Bounds` or similiar (optional)
+            if supplied, pointcloud will contain only points within `bounds
+        
+        Notes
+        -----
+        If `bounds` is supplied, `fpaths` will be filtered automatically such
+        that any .las files containing no points within the defined bounds
+        will be skipped, making it possible to supply a large number of file
+        paths for which the spatial locations of the data are not known.
         
         """
-        # Determine which tiles intersect bounds
-        tiles = [fpath for fpath in fpaths
-                 if _intersects_3D(InfBounds(*bounds), _get_las_bounds(fpath))] 
-        return cls.from_las(*tiles).crop(bounds) 
+        bounds = kwargs.pop('bounds', None)
+        if kwargs:
+           raise TypeError('Invalid keyword arguments {}'.format(kwargs.values()))
+        
+        # Read only relevant files
+        if bounds is not None:
+            fpaths = filter_fpaths(fpaths, bounds)
+        
+        # Build pointcloud
+        if len(fpaths) > 1:
+            pc = cls(_combine_las(*fpaths))
+        else:
+            fpath, = fpaths
+            pc = cls(_get_las_xyz(fpath))
+        
+        if bounds is not None:
+            pc = pc.crop(bounds)
+        
+        return pc
 
     @classmethod
     def from_laspy_File(cls, f):
@@ -422,6 +429,26 @@ class InfBounds(Bounds):
         kwargs.pop('cls') # must be passed positionally
         return super(cls, cls).__new__(cls, **kwargs)
 
+def filter_fpaths(fpaths, bounds):
+    """Keep only .las files whose pointclouds intersect with `bounds`.
+    
+    Arguments
+    ---------
+    fpaths: iterable of str
+        filepaths of .las files
+    bounds: `Bounds` or simiiliar
+        (minx, miny, minz, maxx, maxy, maxz) bounds of tile
+        `None` values are inclusive (i.e. no filtering for that bound)
+    
+    Returns
+    -------
+    list of str
+        subset of `fpaths` whose pointclouds overlap with bounds
+    
+    """
+    bounds = InfBounds(*bounds)
+    return [fpath for fpath in fpaths
+            if _intersects_3D(bounds, _get_las_bounds(fpath))]
 
 def _combine_las(*fpaths):
     """Efficiently combine las files to a single [xs, ys, zs] array."""
