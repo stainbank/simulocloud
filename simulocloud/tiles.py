@@ -335,6 +335,4 @@ def make_edges(bounds, splitlocs):
         edges.append(np.concatenate([[min_], locs, [max_]]))
     
     # Grid edge coordinates
-    grids = np.meshgrid(*edges, indexing='ij')
-    grids = [DD[..., np.newaxis] for DD in grids] # promote to 4D
-    return np.concatenate(grids, axis=3)
+    return np.stack(np.meshgrid(*edges, indexing='ij'), axis=-1)
