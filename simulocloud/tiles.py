@@ -60,7 +60,8 @@ class TilesGrid(object):
         Arguments
         ---------
         tiles: `numpy.ndarray` (ndim=3, dtype=object)
-            3D array of ordered pointclouds produced by `retile`
+            3D array of ordered pointclouds gridded onto `edges`
+            usually produced by `grid_pointclouds`
         edges: `numpy.ndarray` (ndim=4, dtype=float)
             4D array of shape (nx+1, ny+1, nz+1, 3) where nx, ny, nz = tiles.shape
             usually produced by `make_edges`
@@ -124,7 +125,7 @@ class TilesGrid(object):
         return bool(len(self))
 
     @classmethod
-    def from_splitlocs(cls, pcs, splitlocs):
+    def from_splitlocs(cls, pcs, splitlocs, inclusive=True):
         """Construct `TilesGrid` instance by retiling pointclouds.
         
         Arguments
@@ -139,12 +140,19 @@ class TilesGrid(object):
         
             axes can be omitted, resulting in no splitting in that
             axis
+        inclusive: bool (optional, default=True)
+            if True, upper bounds of grid outer edges are increased by 1e.-6,
+            so that all points in `pcs` are preserved upon gridding
+            if False, any points exactly on the upper bounds of `pcs` are lost
+            (i.e. maintain upper bounds exclusive cropping)
         
         Returns
         -------
         `TilesGrid` instance
-            internal edges defined by `splitlocs`, grid bounds equal to merged
-            bounds of `pcs`
+            internal edges defined by `splitlocs`
+            lower grid bounds are equal to merged bounds of `pcs`, upper grid
+            bounds are 1e-6 higher than those of `pcs` if `inclusive` is True,
+            otherwise they are equal
         
         """
         # Sort splitlocs and determine their bounds
@@ -164,8 +172,8 @@ class TilesGrid(object):
         if not simulocloud.pointcloud._inside_bounds(splitloc_bounds, pcs_bounds):
             raise ValueError("Split locations must be within total bounds of pointclouds")
         
-        tiles = retile(pcs, splitlocs, pctype=Tile)
         edges = make_edges(pcs_bounds, splitlocs)
+        tiles = grid_pointclouds(pcs, edges, pctype=Tile)
         
         return cls(tiles, edges, validate=False)
 
@@ -195,22 +203,18 @@ class TilesGrid(object):
         
         return True
 
-def retile(pcs, splitlocs, pctype=Tile):
-    """Return a 3D grid of (merged) pointclouds split along x, y and z axes.
+def grid_pointclouds(pcs, edges, pctype=Tile):
+    """Return a 3D array of (merged) pointclouds gridded to edges.
     
     Arguments
     ---------
     pcs: seq of `simulocloud.pointcloud.PointCloud`
-    splitlocs: dict
-        {axis: locs, ...}, where:
-            axis: str
-                'x', 'y' and/or 'z'
-            locs: list
-                locations along specified axis at which to split
-                (see docs for `PointCloud.split`)
-        axes can be omitted, resulting in no splitting in that axis
-    pctype: subclass of `simulocloud.pointcloud.PointCloud`
-       type of pointclouds to return (`simulocloud.pointcloud.PointCloud`)
+    edges: `numpy.ndarray` (ndim=4, dtype=float)
+        ij-indexed meshgrids for x, y and z stacked in 4th axis, whose values
+        defining boundaries of cells into `pcs` will be gridded
+    pctype: subclass of `simulocloud.pointcloud.PointCloud` (optional)
+        type of pointclouds to return
+        default = `simulocloud.pointcloud.PointCloud`
     
     Returns
     -------
@@ -222,24 +226,19 @@ def retile(pcs, splitlocs, pctype=Tile):
             0:x, 1:y, 2:z
     
     """
-    shape = [] #nx, ny, nz
-    for axis in 'x', 'y', 'z':
-        locs = sorted(splitlocs.setdefault(axis, []))
-        shape.append(len(locs) + 1) #i.e. n pointclouds created by split
-        #! Should assert splitlocs within bounds of pcs
-        splitlocs[axis] = locs
+    # Pre-allocate empty tiles array
+    shape = (len(pcs),) + tuple((n-1 for n in edges.shape[:3]))
+    tiles = np.empty(shape, dtype=object)
     
     # Build 4D array with pcs split in x, y and z
-    tiles = np.empty([len(pcs)] + shape, dtype=object)
     for i, pc in enumerate(pcs):
-        pcs = pc.split('x', splitlocs['x'], pctype=pctype)
+        pcs = pc.split('x', edges[:,0,0,0], pctype=pctype)[1:-1]
         for ix, pc in enumerate(pcs):
-            pcs = pc.split('y', splitlocs['y'])
+            pcs = pc.split('y', edges[0,:,0,1])[1:-1]
             for iy, pc in enumerate(pcs):
-                pcs = pc.split('z', splitlocs['z'])
+                pcs = pc.split('z', edges[0,0,:,2])[1:-1]
                 # Assign pc to predetermined location
-                for iz, pc in enumerate(pcs):
-                    tiles[i, ix, iy, iz] = pc
+                tiles[i, ix, iy] = pcs
     
     # Flatten to 3D
     return np.sum(tiles, axis=0)
@@ -273,16 +272,27 @@ def fractional_splitlocs(bounds, nx=None, ny=None, nz=None):
     
     return splitlocs
 
-def make_edges(bounds, splitlocs):
-    """Return coordinate array describing the edges between retiled pointclouds.
+def make_edges(bounds, splitlocs, inclusive=False):
+    """Return coordinate array describing the edges between gridded pointclouds.
     
     Arguments
     ---------
     bounds: `simulocloud.pointcloud.Bounds` or similiar
        (minx, miny, minz, maxx, maxy, maxz) bounds of entire grid
-    splitlocs: dict {axis: locs, ...}
-        same as argument to `retile`
-    
+    splitlocs: dict {axis: locs, ...}, where:
+        axis: str
+            'x', 'y' and/or 'z'
+        locs: list
+            locations along specified axis at which to split
+            (see docs for `simulocloud.pointcloud.PointCloud.split`)
+        axes can be omitted, resulting in no splitting in that axis
+    inclusive: bool (optional, default=False)
+        if True, upper bounds of grid outer edges are increased by 1e.-6,
+        so that all points in a pointcloud are guaranteed to be preserved upon
+        gridding when `bounds` is equal to the bounds of said pointcloud
+        if False, any points exactly on the upper bounds of `pcs` are lost
+        (i.e. maintain upper bounds exclusive cropping)
+
     Returns
     -------
     edges: `numpy.ndarray` (ndim=4, dtype=float)
@@ -293,10 +303,8 @@ def make_edges(bounds, splitlocs):
     
     Notes and Examples
     ------------------
-    This function is intended to be used alongside `retile` with the same
-    `splitlocs` and `bounds` equal to those of the pointcloud (or merged bounds
-    of pointclouds) to be retiled. The resultant `edges` grid provides a
-    spatial description of the pointclouds in the `tiles` grid:
+    An edges` grid provides a spatial description of the pointclouds in a
+    `tiles` grid:
     - the coordinates at `edges[ix, iy, iz]` lies between the two adjacent
       pointclouds `tiles[ix-1, iy-1, iz-1], tiles[ix, iy, iz]`
     - `edges[ix, iy, iz]` and `edges[ix+1, iy+1, iz+1]` combine to form a set
@@ -304,8 +312,8 @@ def make_edges(bounds, splitlocs):
       of the pointcloud at `tiles[ix, iy, iz]`
      
     >>> splitlocs = fractional_splitlocs(pc.bounds, nx=10, ny=8, nz=5)
-    >>> tiles = retile(pc, splitlocs)
     >>> edges = make_edges(pc.bounds, splitlocs)
+    >>> tiles = grid_pointclouds([pc], edges)
     >>> print tiles.shape, edges.shape # +1 in each axis
     (10, 8, 5) (11, 9, 6, 3)
     >>> ix, iy, iz = 5, 3, 2
@@ -324,6 +332,11 @@ def make_edges(bounds, splitlocs):
             maxx=16, maxy=26.2, maxz=3
     
     """
+    if inclusive:
+        bounds = np.array(bounds)
+        bounds[3:] += 1e-6 # expand upper bounds to ensure all points contained
+        bounds = simulocloud.pointcloud.Bounds(*bounds)
+     
     #! Should fail if splitlocs is not within bounds
     
     # Determine bounds for each tile in each axis
