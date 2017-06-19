@@ -133,6 +133,17 @@ def test_TilesGrid_subset_with_integers_has_arrays(grid, half_indices):
     subset = grid[ix, iy, iz] # single element
     assert (subset.validate()) and (subset.tiles.shape == (1,1,1))
 
+def test_TilesGrid_indexing_accepts_negative_indices(grid):
+    """Can negative (i.e.) backwards indexing be used?"""
+    shape = np.array(grid.shape)
+    last = shape-1
+    neg = last - shape
+    
+    grid_last = grid[tuple(last)]
+    grid_neg = grid[tuple(neg)]
+    
+    assert (grid_last.bounds == grid_neg.bounds) and (grid_last.tiles == grid_neg.tiles)
+
 def test_subsetting_to_empty_is_reasonable(grid):
     """Are both tiles and edges empty when subsetting TilesGrid to empty?"""
     ix, iy, iz = grid.tiles.shape

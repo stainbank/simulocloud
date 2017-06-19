@@ -101,7 +101,9 @@ class TilesGrid(object):
                 if sl is None:
                     start, stop, step = slice(None).indices(nd)
                 else: # single element indexing
-                   start, stop, step = slice(sl, sl+1).indices(nd)
+                    stop = sl+1
+                    if stop == 0: stop = None # when sl = -1
+                    start, stop, step = slice(sl, stop).indices(nd)
             
             if not step == 1:
                 raise ValueError("TilesGrid must be contiguous, slice step must be 1")
