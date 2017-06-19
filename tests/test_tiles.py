@@ -87,6 +87,14 @@ def test_TilesGrid_is_self_validating(grid):
     grid.edges *= 100
     assert not grid.validate()
 
+def test_TilesGrid_initialisation_fails_if_invalid(pcs, edges, tiles):
+    """Is a `TilesGridException` raised when trying to create a `TilesGrid` instance with edges which incorrectly describe tiles?."""
+    # Make edges out of range
+    edges = edges + 100
+    
+    with pytest.raises(simulocloud.exceptions.TilesGridException):
+        simulocloud.tiles.TilesGrid(tiles, edges)
+
 def test_pointcloud_retiling_obeys_splitlocs(pcs, splitlocs):
     """Does the tiles grid created by `from_splitlocs` adhere to the specified split locations?"""
     grid = simulocloud.tiles.TilesGrid.from_splitlocs(pcs, splitlocs)
@@ -134,7 +142,7 @@ def test_TilesGrid_subset_with_integers_has_arrays(grid, half_indices):
     assert (subset.validate()) and (subset.tiles.shape == (1,1,1))
 
 def test_TilesGrid_indexing_accepts_negative_indices(grid):
-    """Can negative (i.e.) backwards indexing be used?"""
+    """Can negative (i.e. backwards) indexing be used?"""
     shape = np.array(grid.shape)
     last = shape-1
     neg = last - shape
@@ -149,14 +157,6 @@ def test_subsetting_to_empty_is_reasonable(grid):
     ix, iy, iz = grid.tiles.shape
     subset = grid[ix:, iy:, iz:]
     assert (not subset) and (not subset.edges.size)
-
-def test_TilesGrid_initialisation_fails_if_invalid(pcs, edges, tiles):
-    """Is a `TilesGridException` raised when trying to create a `TilesGrid` instance with edges which incorrectly describe tiles?."""
-    # Make edges out of range
-    edges = edges + 100
-    
-    with pytest.raises(simulocloud.exceptions.TilesGridException):
-        simulocloud.tiles.TilesGrid(tiles, edges)
 
 def test_TilesGrid_indexing_doesnt_accept_steps(grid, half_indices):
     """Is a ValueError raised when attempting to create a non-contiguous or negatively indexed subset of TilesGrid?"""
