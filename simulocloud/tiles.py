@@ -100,9 +100,8 @@ class TilesGrid(object):
             except AttributeError: # coerce indices to slice
                 if sl is None:
                     start, stop, step = slice(None).indices(nd)
-                else: # single element indexing
-                    stop = sl+1
-                    if stop == 0: stop = None # when sl = -1
+                else: # single element indexing 
+                    stop = None if sl == -1 else sl+1
                     start, stop, step = slice(sl, stop).indices(nd)
             
             if not step == 1:
@@ -116,7 +115,10 @@ class TilesGrid(object):
                 for sl in key_]
         
         return type(self)(self.tiles[key_], self.edges[ekey], validate=False)
-        # bounds = edges[0,0,0], edges[-1,-1,-1]
+
+    def __iter__(self):
+        """Iterate over the tiles array."""
+        return np.nditer(self.tiles, flags=["refs_ok"])
 
     def __len__(self):
         """Return the number of elements in tiles grid."""

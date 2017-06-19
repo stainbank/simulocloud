@@ -164,3 +164,12 @@ def test_TilesGrid_indexing_doesnt_accept_steps(grid, half_indices):
     for start, stop, step in ((0, ix, 2),(ix, 0, -2)):
         with pytest.raises(ValueError):
             grid[start:stop:step]
+
+def test_TilesGrid_is_iterable(grid):
+    """Does a for loop run over a TilesGrid instance terminate?"""
+    n = len(grid)
+    for i, pc in enumerate(grid):
+        if i == n:
+            assert 0
+    else:
+        assert i == n-1 # visited all the pointclouds
