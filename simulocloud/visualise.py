@@ -101,7 +101,7 @@ def _iter_scatter_args(pcs, dims, colours, labels):
 def _crop_and_sample_pointclouds(pcs, bounds, n):
     """Return generator of cropped point clouds with maximum n points."""
     if bounds is not None:
-        pcs = (pc.crop(*bounds) for pc in pcs)
+        pcs = (pc.crop(bounds) for pc in pcs)
     return (pc.downsample(n) if len(pc)>n else pc for pc in pcs) 
 
 def _iternones():
