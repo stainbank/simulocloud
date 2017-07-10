@@ -53,6 +53,10 @@ def half_bounds(pc_las):
     yint = (maxy - miny)/4.
     return simulocloud.pointcloud.Bounds(minx+xint, miny+yint, None,
                                          maxx-yint, maxy-yint, None)
+@pytest.fixture
+def fpaths(subdir='ALS_tiles'):
+    """Return list of filepaths of .las files in data directory."""
+    return get_fpaths(subdir)
 
 """ Helper functions """
 def abspath(fname, fdir='data'):
@@ -119,14 +123,14 @@ def test_PointCloud_read_from_single_las(pc_las, expected_las_arr):
     """Can PointCloud be constructed from a single .las file?"""
     assert np.allclose(pc_las.arr, expected_las_arr)
 
-def test_PointCloud_from_multiple_las(pc_las, fdir='ALS_tiles'):
+def test_PointCloud_from_multiple_las(pc_las, fpaths):
     """Can PointCloud be constructed from multiple .las files?"""
-    pc = simulocloud.pointcloud.PointCloud.from_las(*get_fpaths(fdir))
+    pc = simulocloud.pointcloud.PointCloud.from_las(*fpaths)
     assert same_len_and_bounds(pc, pc_las)
 
-def test_PointCloud_from_multiple_las_with_bounds(pc_las, half_bounds, fdir='ALS_tiles'):
+def test_PointCloud_from_multiple_las_with_bounds(pc_las, half_bounds, fpaths):
     """Is a `PointCloud` constructed with the argument `bounds` cropped to those bounds?"""
-    pc = simulocloud.pointcloud.PointCloud.from_las(*get_fpaths(fdir), bounds=half_bounds)
+    pc = simulocloud.pointcloud.PointCloud.from_las(*fpaths, bounds=half_bounds)
     assert same_len_and_bounds(pc, pc_las.crop(half_bounds))
 
 def test_empty_PointCloud():
@@ -271,15 +275,15 @@ def test_PointCloud_can_downsample(pc_las):
     pc = pc_las.downsample(n)
     assert len(pc) == n and len(np.intersect1d(pc_las.points, np.unique(pc.points))) == len(pc.points)
 
-def test_pointclouds_merged_by_function(pc_las, fdir='ALS_tiles'):
+def test_pointclouds_merged_by_function(pc_las, fpaths):
     """Does the merge function preserve the input points?"""
-    pcs = [simulocloud.pointcloud.PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
+    pcs = [simulocloud.pointcloud.PointCloud.from_las(fpath) for fpath in fpaths]
     merged = simulocloud.pointcloud.merge(pcs)
     assert same_len_and_bounds(merged, pc_las)
 
-def test_pointclouds_merged_by_method(pc_las, fdir='ALS_tiles'):
+def test_pointclouds_merged_by_method(pc_las, fpaths):
     """Does the merge method preserve the input points?"""
-    pcs = [simulocloud.pointcloud.PointCloud.from_las(fpath) for fpath in get_fpaths(fdir)]
+    pcs = [simulocloud.pointcloud.PointCloud.from_las(fpath) for fpath in fpaths]
     merged = pcs.pop().merge(pcs)
     assert same_len_and_bounds(merged, pc_las)
 
