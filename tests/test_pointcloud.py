@@ -133,6 +133,13 @@ def test_PointCloud_from_multiple_las_with_bounds(pc_las, half_bounds, fpaths):
     pc = simulocloud.pointcloud.PointCloud.from_las(*fpaths, bounds=half_bounds)
     assert same_len_and_bounds(pc, pc_las.crop(half_bounds))
 
+def test_PointCloud_can_be_instantiated_empty_from_las(pc_las, fpaths):
+    """Does `from_las` allow empty files to be created?."""
+    # Create bounds guaranteed to be outside of fpaths
+    bounds = pc_las.bounds
+    bounds = bounds._replace(minx=bounds.maxx+1., maxx=bounds.maxx+100.)
+    assert not simulocloud.pointcloud.PointCloud.from_las(*fpaths, bounds=bounds, allow_empty=True)
+
 def test_empty_PointCloud():
     """Is the PointCloud generated from `None` empty?"""
     assert not len(simulocloud.pointcloud.PointCloud(None))

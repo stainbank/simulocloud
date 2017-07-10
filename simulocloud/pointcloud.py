@@ -92,6 +92,8 @@ class PointCloud(object):
             filepaths of .las file containing 3D point coordinates
         bounds: `Bounds` or similiar (optional)
             if supplied, pointcloud will contain only points within `bounds
+        allow_empty: bool
+            if `bounds` specified, allows resultant pointcloud to be empty
         
         Notes
         -----
@@ -102,6 +104,9 @@ class PointCloud(object):
         
         """
         bounds = kwargs.pop('bounds', None)
+        allow_empty = kwargs.pop('allow_empty', None)
+        if bounds is None and allow_empty is not None:
+            raise TypeError('Argument `allow_empty` is meaningless without `bounds`')
         if kwargs:
            raise TypeError('Invalid keyword arguments {}'.format(kwargs.values()))
         
@@ -113,11 +118,13 @@ class PointCloud(object):
         if len(fpaths) > 1:
             pc = cls(_combine_las(*fpaths))
         else:
-            fpath, = fpaths
-            pc = cls(_get_las_xyz(fpath))
+            try:
+                 pc = cls(_get_las_xyz(*fpaths))
+            except(TypeError):
+                 pc = cls(None)
         
         if bounds is not None:
-            pc = pc.crop(bounds)
+            pc = pc.crop(bounds, allow_empty=allow_empty)
         
         return pc
 
