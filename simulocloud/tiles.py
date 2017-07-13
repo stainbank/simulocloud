@@ -353,3 +353,42 @@ def make_edges(bounds, splitlocs, inclusive=False):
     
     # Grid edge coordinates
     return np.stack(np.meshgrid(*edges, indexing='ij'), axis=-1)
+
+def make_regular_edges(bounds, spacings, bases=None, exact=False):
+    """Return `edges` array with regular interval spacing.
+    
+    Arguments
+    ---------
+    bounds: `Bounds` or equivalent tuple
+        (minx, miny, minz, maxx, maxy, maxz)
+    spacings: `dict`
+        {axis: spacing}, where
+        axis: `str`
+            any combination of 'x', 'y', 'z'
+        spacing: numeric
+            size of regular interval in that axis
+            may be adjusted, see `exact` below)
+    bases: `dict` (optional)
+        {axis: base} to align bounds (see documentation for `align_bounds`)
+    exact: bool (default=False):
+        for a given axis, unless (maxbound-minbound)%spacing == 0, either of
+        spacing or bounds must be adjusted to yield integer n intervals
+        if True, upper bound will be adjusted downwards to ensure spacing is
+        exactly as specified (edges bounds will no longer == `bounds`!)
+        if False, spacing will be adjusted and bounds will remain as specified
+    """
+    if bases is not None:
+        raise NotImplementedError
+        bounds = align_bounds(bounds, bases)
+    
+    splitlocs = {}
+    for axis, spacing in spacings.iteritems():
+        minbound, maxbound = simulocloud.pointcloud.axis_bounds(bounds, axis)
+        num = int((maxbound-minbound)/(spacing*1.))
+        if exact:
+            # Adjust upper bound to ensure exact spacing
+            maxbound = minbound + int((maxbound-minbound)/spacing) * spacing
+            bounds = bounds._replace(**{'max'+axis: maxbound})
+        splitlocs[axis] = np.linspace(minbound, maxbound, num=num, endpoint=False)[1:]
+    
+    return make_edges(bounds, splitlocs)

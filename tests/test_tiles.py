@@ -173,3 +173,17 @@ def test_TilesGrid_is_iterable(grid):
             assert 0
     else:
         assert i == n-1 # visited all the pointclouds
+
+def test_default_regular_edges_preserves_bounds(bounds):
+    """Does the default creation of a regularly spaced `edges` array have exactly `bounds`?."""
+    # random spacings
+    spacings = {axis: np.random.rand() for axis in 'xy'}
+    edges = simulocloud.tiles.make_regular_edges(bounds, spacings)
+    edge_bounds = simulocloud.pointcloud.Bounds(*
+            np.concatenate([edges[0,0,0], edges[-1,-1,-1]]))
+    # Ensure even spacing
+    for axis, sl in zip('xy', ((slice(None),0,0,0), (0,slice(None),0,1))):
+        axedges = edges[sl]
+        axspacings = axedges[1:] - axedges[:-1]
+        assert np.allclose(axspacings, axspacings[0])
+    assert edge_bounds == bounds
