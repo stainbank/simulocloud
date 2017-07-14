@@ -202,3 +202,17 @@ def test_regular_edges_can_preserve_spacings(bounds):
         axspacing = axspacings[0]
         assert np.allclose(axspacings, axspacings[0]) # even spacing
         assert np.isclose(axspacing, spacings[axis]) # exact spacing
+
+def test_bounds_can_align_onto_base(bounds):
+    """Do aligned bounds sit on the specified base?"""
+    bases = {axis: np.random.rand() for axis in 'xy'}
+    aligned_bounds = simulocloud.tiles.align_bounds(bounds, bases)
+    # Check alignment
+    for axis, base in bases.iteritems():
+        for bound in simulocloud.pointcloud.axis_bounds(aligned_bounds, axis):
+            assert np.any(np.isclose(bound%base, [0, base]))
+    # Check aligned bounds fit within old bounds
+    for axis in 'xyz':
+        minold, maxold = simulocloud.pointcloud.axis_bounds(bounds, axis)
+        minnew, maxnew = simulocloud.pointcloud.axis_bounds(aligned_bounds, axis)
+        assert minold <= minnew and maxold >= maxnew

@@ -370,15 +370,17 @@ def make_regular_edges(bounds, spacings, bases=None, exact=False):
             may be adjusted, see `exact` below)
     bases: `dict` (optional)
         {axis: base} to align bounds (see documentation for `align_bounds`)
+        note that bounds will become unaligned if `exact` is True, unless
+        `bases` and `spacings` are equal
     exact: bool (default=False):
         for a given axis, unless (maxbound-minbound)%spacing == 0, either of
         spacing or bounds must be adjusted to yield integer n intervals
         if True, upper bound will be adjusted downwards to ensure spacing is
         exactly as specified (edges bounds will no longer == `bounds`!)
         if False, spacing will be adjusted and bounds will remain as specified
+    
     """
     if bases is not None:
-        raise NotImplementedError
         bounds = align_bounds(bounds, bases)
     
     splitlocs = {}
@@ -392,3 +394,45 @@ def make_regular_edges(bounds, spacings, bases=None, exact=False):
         splitlocs[axis] = np.linspace(minbound, maxbound, num=num, endpoint=False)[1:]
     
     return make_edges(bounds, splitlocs)
+
+def align_bounds(bounds, bases):
+    """Contract `bounds` such that each axis aligns on it's respective `base`.
+    
+    Arguments
+    ---------
+    bounds: `Bounds` or equivalent tuple
+        (minx, miny, minz, maxx, maxy, maxz)
+    bases: `dict`
+        {axis: base} where
+        axis: `str`
+            any combination of 'x', 'y', 'z'
+        base: numeric
+            value onto which to align axis bounds
+    
+    Returns
+    -------
+    bounds: `Bounds`
+        bounds with each each axis specified in `bases` is a multiple of the
+        respective base
+        always equal or smaller in area than input `bounds`
+    
+    Example
+    -------
+    >>> bounds
+    Bounds(minx=3.7, miny=-11.3, minz=7.5, maxx=20.6, maxy=5.3, maxz=23.3)
+    >>> bases
+    {'x': 1.0, 'y': 0.5}
+    >>> align_bounds(bounds, bases)
+    Bounds(minx=4.0, miny=-11.0, minz=7.5, maxx=20.0, maxy=5.0, maxz=23.3)
+    
+    """
+    bases = {axis: float(base) for axis, base in bases.iteritems()}
+    bounds = simulocloud.pointcloud.Bounds(*bounds)
+    
+    replacements = {}
+    for axis, base in bases.iteritems():
+        minbound, maxbound = simulocloud.pointcloud.axis_bounds(bounds, axis)
+        remain = (minbound % base)
+        replacements['min'+axis] = minbound + base - remain if remain else minbound
+        replacements['max'+axis] = maxbound - maxbound % base
+    return bounds._replace(**replacements)
