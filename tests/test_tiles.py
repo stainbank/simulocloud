@@ -187,3 +187,18 @@ def test_default_regular_edges_preserves_bounds(bounds):
         axspacings = axedges[1:] - axedges[:-1]
         assert np.allclose(axspacings, axspacings[0])
     assert edge_bounds == bounds
+
+def test_regular_edges_can_preserve_spacings(bounds):
+    """Does the `exact` option preserve spacings upon creation of regularly spaced `edges`?"""
+    # random spacings
+    spacings = {axis: np.random.rand() for axis in 'xy'}
+    edges = simulocloud.tiles.make_regular_edges(bounds, spacings, exact=True)
+    edge_bounds = simulocloud.pointcloud.Bounds(*
+            np.concatenate([edges[0,0,0], edges[-1,-1,-1]]))
+    # Ensure even spacing
+    for axis, sl in zip('xy', ((slice(None),0,0,0), (0,slice(None),0,1))):
+        axedges = edges[sl]
+        axspacings = axedges[1:] - axedges[:-1]
+        axspacing = axspacings[0]
+        assert np.allclose(axspacings, axspacings[0]) # even spacing
+        assert np.isclose(axspacing, spacings[axis]) # exact spacing
