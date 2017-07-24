@@ -90,7 +90,8 @@ def _iter_scatter_args(pcs, dims, colours, labels):
     if colours is None:
         colours = _iternones()
     if labels is None:
-        labels = _iteralphabet()
+        # labels = _iteralphabet()
+        labels = _iternones()
         
     for pc, colour, label in itertools.izip(pcs, colours, labels):
         arrs = (getattr(pc, dim.lower()) for dim in dims) # extract coordinates
